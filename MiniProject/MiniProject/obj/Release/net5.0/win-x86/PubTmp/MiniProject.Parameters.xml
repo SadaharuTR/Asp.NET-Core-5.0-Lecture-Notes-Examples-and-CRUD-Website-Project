@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<parameters>
+  <parameter name="IIS Web Application Name" description="" value="MiniProjectCRUD" tags="IisApp">
+    <parameterEntry kind="ProviderPath" scope="IisApp" match="^C:\\Users\\acdem\\OneDrive\\Masaüstü\\MiniProject\\MiniProject\\obj\\Release\\net5\.0\\win-x86\\PubTmp\\Out\\$" />
+  </parameter>
+  <parameter name="MiniProject.Data.ApplicationDbContext" description="" value="Data Source=tcp:miniprojectdbserver1.database.windows.net,1433;Initial Catalog=MiniProject_db;User Id=adminuser@miniprojectdbserver1;Password=admin123." tags="dbfullsql">
+    <parameterEntry kind="ProviderPath" scope="dbfullsql" match="^C:\\Users\\acdem\\OneDrive\\Masaüstü\\MiniProject\\MiniProject\\obj\\Release\\net5\.0\\win-x86\\PubTmp\\EFSQLScripts\\MiniProject\.Data\.ApplicationDbContext\.sql$" />
+  </parameter>
+</parameters>

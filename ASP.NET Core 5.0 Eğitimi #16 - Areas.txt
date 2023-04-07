@@ -1,0 +1,247 @@
+Area Nedir? 
+
+- Web uygulamasında, farklı işlevsellikleri ayırmak için kullanılan özelliktir.
+- Bu farklı işlevsellikler için farklı katmanda, bir route ayarlamamızı sağlayan ve bu katmanda o işleve özel yönetim sergileyen bir yapılanmadır.
+
+- Her bir are içerisinde View, Controller ve Model katmanı barındırabilir.
+- Bylece Asp.NET Core uygulamalarında yönetilebilir küçük ve işlevsel gruplar oluşturulabilir.
+
+Area Nerelerde Kullanılabilir?
+
+- Yönetim panelleri,
+- Faturalandırma sayfaları,
+- İstatiksel paneller,
+- İşlevsel modüller,
+- Uygulamada mantıksal olarak ayrılabilen üst düzey işlevsel bileşenler.
+
+Area çok katmanlı mimari değildir. Presentation Layer'daki bir klasördür.
+
+---
+
+Area Oluşturma
+
+- Bir arayüzümüzde kullanıcı ile etkileşimde olduğumuzu varsayalım. Kullanıcı kendi profilini düzenliyor, sepete ürün ekliyor, bizimle iletişim kuruyor vs. olabilir.
+
+- Eğer ki yönetimsel işlemsel yapıyorsa bunların kullanıcıdan mantıksal olarak ayrılması gerekir.
+
+Mesela yönetim paneli ile ilgili kodlar, belirli bir klasörün(area) altında olsun. Faturalandırma işlemleri yaptığımız controller'lar da faturalandırma areas'ı içinde olsun. İsteyebiliriz.
+
+Solution -> Add Folder -> Areas (uygulama klasörün ismini tanıyacaktır.)
+
+Areas -> Add -> Area -> MVC Area -> yonetim_paneli
+
+Oluşturulan klasörün alt dizinlerine baktığımızda sanki küçük-lokal bir MVC uygulaması oluşturmuş gibidir.
+-Controllers
+-Data (Entity Framework gibi verisel işlemler için)
+-Models
+-Views
+
+sadece yönetim paneli ile ilgili işlemlerin yapılacağı bir alan oluşturuldu.
+
+Bir alan daha oluşturalım.
+
+Areas -> Add -> Area -> MVC Area -> fatura_paneli
+
+1- Area içerisindeki controller Area Attribute'u ile işaretlenmelidir.
+
+Ana uygulamada HomeController.cs mevcut.
+
+yonetim_paneli'nde de HomeController'ımız olsun.
+
+yonetim_paneli -> Add Controller -> MVC Empty -> HomeController.cs
+
+oluşturduktan sonra Attribute ile işaretlemeden programı çalıştırırsak;
+
+An unhandled exception occurred while processing the request.
+AmbiguousMatchException: The request matched multiple endpoints. Matches:
+
+areasexample.Controllers.HomeController.Index (areasexample)
+areasexample.Areas.yonetim_paneli.Controllers.HomeController.Index (areasexample)
+
+hatası alırız. Controller çakışması oldu. Controller'lar uygulamanın neresinde olursa olsun Reflection ile bulunup ayağa kaldırılır. İki tane farklı namespace'de aynı isimde controller bulundu ve bu isme bir istek geldi. Program hangisinden ayağa kaldıracağını bilemez.
+
+2- Böylece ilgili alanın uygulamadaki adı resmiyette belirtilmiş olacaktır.
+Akti taktirde farklı arealardaki controller'lardan aynı isimde olanların çakışma ihtimalleri vardır.
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace areasexample.Areas.yonetim_paneli.Controllers
+{
+    //Bu işlemden sonra bu area'ya gelen isteklerde bu area altındaki Index()'e istek geliyorsa buranın tetikleneceğini belirttik.
+    [Area("yonetim_paneli")] //rastgele isimlendirme yapılabilir fakat kod yönetimi açısından önerilmez.
+    public class HomeController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+Eğer ki giden istek herhangi bir area belirtmiyorsa ana dizindeki HomeController.cs'e gidecektir.
+Benzer mantıkta fatura_paneli'nin altında da bir HomeController.cs varsa aynı işlemleri ona da yaparız ve çakışmaları engelleriz.
+
+Controller'ı Area Attribute'u ile işaretlediğimiz zaman bu Attribute sayesinde controller'a farklı bir rota vermiş oluyoruz.
+Area'nın getirmiş olduğu özellik tam olarak budur.
+
+---
+
+fatura_paneli'nde de bir HomeController.cs oluşturalım.
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace areasexample.Areas.fatura_paneli.Controllers
+{
+    [Area("fatura_yonetimi")] //anlamlı bir şekilde isimlendirelim.
+    public class HomeController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+Programı çalışştırdığımızda ana dizindeki HomeController tetiklenecektir. Peki bu area'lara istek nasıl atılır?
+
+---
+
+Area'ya Route Belirleme
+
+- Her bir area, içerisindeki controller'lara erişim için farklı bir route sğalamaktadır.
+- Dolayısıyla bu route'ların tarafımızca tasarlanması gerekmektedir.
+
+Dolayısıyla Startup.cs'deki UseEndpoints middleware'ine uğramamız gerekli.
+
+		endpoints.MapControllerRoute(
+                   name: "MyArea",
+                   pattern: "{area=exists}/{controller=Home}/{action=Index}/{id?}");
+				   
+ile burada yapmış olduğumuz rota uygulamadaki bütün area'lar için default olarak tanımlanmış bir rotadır.
+
+Bunu uygulamamıza uyarlayalım. Startup.cs'de;
+
+			app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+                endpoints.MapControllerRoute(
+                   name: "areaDefault",
+                   pattern: "{area=exists}/{controller=Home}/{action=Index}/{id?}");
+                //Burada exists constraint'i rota hedefte bir area ile varsa eşlensin anlamına gelir.
+                //Yani elimizdeki area'lar eşleşsin diye yazdık.
+                //Artık bu rotada hangi area bildirildiyse o tetiklensin demiş olduk.
+            });
+
+ayarladıktan sonra,
+
+https://localhost:5001/yonetim_paneli/home/index isteğini atalım.
+
+yonetim_paneli'nin altındaki Index() tetiklenecektir. Benzer mantıkta,
+
+https://localhost:5001/fatura_yonetimi/home/index istek atarsak yine ilgili yerdeki Index()'in tetiklendiğini görürüz.
+
+Bu şekilde area'lara özel url'ler oluşturabiliyoruz.
+
+---
+
+MapAreaControllerRoute Fonksiyonu
+
+- MapControllerRoute, Default area rotası belirmemizi sağlar.
+
+- MapAreaControllerRoute ise bir area'ya ait özel rota belirlememizi sağlar.
+
+Startup.cs'de;
+
+			app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+         
+                endpoints.MapAreaControllerRoute(
+                   name: "yonetim",
+                   areaName: "yonetim_paneli", //artık bu area değerine sahip tüm controller'lar
+                   pattern: "admin/{controller=Home}/{action=Index}"
+                   ); //buradaki pattern'daki rotayı benimseyeceklerdir.
+                //Bu rota üzerinden istek alabileceklerdir.
+
+                //aynısını fatura için de yapalım.
+                endpoints.MapAreaControllerRoute(
+                   name: "fatura",
+                   areaName: "fatura_yonetimi", 
+                   pattern: "fatura/{controller=Home}/{action=Index}"
+                   ); 
+            });
+			
+https://localhost:5001/admin 'e istek attığımızda yonetim_paneli area değerine sahip controller'ların arasında HomeController varsa onun altındaki Index() tetiklendi.
+
+https://localhost:5001/fatura 'ya istek attığımızda fatura_yonetimi area değerine sahip controller'ların arasında HomeController varsa onun altındaki Index() tetiklendi.
+
+---
+
+Area'lar Arası Bağlantı Oluşturma
+
+- TagHelpers ya da HtmlHelpers ile sağlayabiliriz.
+
+HtmlHelpers ile;
+
+@Html.ActionLink("Yönetim Paneli", "Index", "Home", new { area = "yonetim_paneli"})
+new ile hangi area'nın; 2. ve 3. parametreler hangi controller'ın hangi action'ununa erişmek istiyorsak bu şekilde bildiririz.
+
+@Url.Action ile de aynı işlem yapılabilir.
+<a href = "@Url.Action("Index", "Controller", new { area = "yonetim_paneli"})"> Yönetim Paneli </a>
+
+TagHelpers ile;
+
+<a asp-action="Index", asp-controller="Home" asp-area="yonetim_paneli">Yönetim Paneli</a>
+aynı şekilde asp-area taghelper'i ile hangi area altındaki home-index'e link oluşturacaksak bu şekilde belirtebiliriz.
+
+---
+
+Area'lar Arası Veri Taşıma
+
+- Bir area'da ürettiğimiz değeri diğer area'ya gönderme ihtiyacı hissettik diyelim.
+
+yonetim_paneli'denki HomeController'dan;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace areasexample.Areas.yonetim_paneli.Controllers
+{
+    //Bu işlemden sonra bu area'ya gelen isteklerde bu area altındaki Index()'e istek geliyorsa buranın tetikleneceğini belirttik.
+    [Area("yonetim_paneli")]
+    public class HomeController : Controller
+    {
+        public IActionResult Index()
+        {
+            TempData["data"] = "aaaa ki ki ki aaaaa";
+            return RedirectToAction("Index", "Home", new { area = "fatura_yonetimi" });   
+            //fatura_yonetimi area'sı altındaki Home-Index'e yönlendirmeyi gerçekleştir.
+        }
+    }
+}
+
+fatura_paneli'ndeki HomeController'a veri göndermek için;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace areasexample.Areas.fatura_paneli.Controllers
+{
+    [Area("fatura_yonetimi")]
+    public class HomeController : Controller
+    {
+        public IActionResult Index()
+        {
+            var data = TempData["data"];
+            return View();
+        }
+    }
+}
+
+TempData'yı kullanabiliriz.
+
+https://localhost:5001/admin isteği yonetim_paneli tarafından karşılandı, buradan fatura_yonetimi'ne yönlendirildi, bu area altındaki HomeController'daki Index() tetiklendi ve var data'ya debug modunda geldiğimiz zaman data'ya verimizin taşınmış olduğunu görebiliriz.
+

@@ -1,0 +1,514 @@
+Form Üzerinde Veri Alma
+
+ProductController.cs;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult VeriAl(IFormCollection datas)
+        //IFormCollection, Microsoft.AspNetCore.Http namespace'inden gelen bir arayüzdür. Sayesinde 
+        //post edilen formun içerisindeki tüm input nesnelerinin dataları yakalanabilmektedir.
+        //datas üzerinden name değerleri ile bu verileri yakalayabilmekteyiz.
+        {
+            var value1 = datas["txtValue1"].ToString();
+            var value2 = datas["txtValue2"].ToString();
+            var value3 = datas["txtValue3"].ToString();
+
+            return View();
+        }
+    }
+}
+
+CreateProduct.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+<form asp-action="VeriAl" asp-controller="Product" method="post">
+    <input type="text" name="txtValue1" /> <br />
+    <input type="text" name="txtValue2" /> <br />
+    <input type="text" name="txtValue3" /> <br />
+    <button>Gönder</button>
+</form>
+
+---
+
+Bu yöntemin bir başka varyasyonu da vardır.
+
+		[HttpPost]
+        public IActionResult VeriAl(string txtValue1, string txtValue2, string txtValue3)
+        {
+            return View();
+        }
+
+parametreler üzerinden de yakalanabilir. Ya da 3. bir yöntem olan ilgili verileri tür olan belirtilen class'ın instance'ları üzerinden alabiliriz;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public class DataModel
+        {
+            public string txtValue1 { get; set; }
+            public string txtValue2 { get; set; }
+            public string txtValue3 { get; set; }
+
+        }
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult VeriAl(DataModel datamodel)
+        {
+            return View();
+        }
+    }
+}
+
+Burada DataModel'dan üretilen nesnedeki property'ler üzerinden eşleştirme yapılıp kodun yönetilebilirliği artmıştır.
+
+---
+
+Form Üzerinden Bind Edilmiş Verileri Alma
+
+- Models klasöründeki Product.cs ile bind edelim.
+
+		[HttpPost]
+        public IActionResult VeriAl(Product product)
+        {
+            return View();
+        }
+
+CreateProduct.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@model OrnekUygulama.Models.Product
+
+<form asp-action="VeriAl" asp-controller="Product" method="post">
+    <input asp-for="ProductName" type="text" /> <br />
+    <input asp-for="Quantity" type="text" /> <br />
+    <button>Gönder</button>
+</form>
+
+Fakat bind'da oluşturmuş olduğumuz inputları ProductController.cs'de farklı bir türde de yakalayabiliriz.
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public class MyClass
+        {
+            public string ProductName { get; set; }
+            public int Quantity { get; set; }
+        }
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult VeriAl(MyClass model)
+        {
+            return View();
+        }
+    }
+}
+
+E peki bind mekanizmasını niye kullandık?
+
+- İşimizi kolaylaştırmaya yarar. Bir zorunluluğu yoktur. Fakat Product product parametresi üzerinden yakalamak daha kolay ve anlaşılır olacaktır.
+
+İdeal durum bind'da hangi model kullanıldıys post neticesinde o model türünde ilgili dataları karşılamaktır.
+
+Türe bağımlılık yok, türün bind ettiği property'lere karşılık name değerlerinde inpu'lar oluşturulacağından dolayı o name değerlerini barındıran farklı türde de karşılama yapabiliriz. Burada MyClass türünden yaptık.
+
+-----------------------------------------------
+
+QueryString Üzerinden Veri Alma
+
+- Güvenlik gerektirmeyen bilgilerin url üzerinde taşınması için kullanılan yapılanmadır.
+
+https://......com/sehir/ankara?ilce=2
+
+burada ?ilce=2 QueryString'dir.
+
+- QueryString yapılan request'in türü her ne olursa olsun query string değerleri taşınabilir.
+
+ProductController.cs;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {        
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+        //https://localhost:5001/product/verial?a=5 yazıp enter'a bastığımızda istek geldiğinde 
+        public IActionResult VeriAl(string a) //client'dan verilerin alındığını "5" görürüz.
+        {
+            return View();
+        }
+    }
+}
+
+Not: Birden fazla parametre durumunda istekte belirtilip controller.cs de parametre ile karşılanmasa bile o değer sunucuya gelecektir, sadece biz elde edememiş oluruz.
+
+Kullanıcı birden fazla parametre girerse;
+
+		//https://localhost:5001/product/verial?a=5&b=ahmet yazıp enter'a bastığımızda istek geldiğinde 
+        public IActionResult VeriAl(string a, string b) //client'dan verilerin alındığını a'ya "5" b'ye "ahmet" geldiğini görürüz.
+        {
+            return View();
+        }
+
+string ile karşılamamızın sebebi genel karşılayabilecek bir tür olmasıdır.
+
+Ya da;
+
+		public IActionResult VeriAl() 
+        {
+            var queryString = Request.QueryString;
+            //Request yapılan endpoint'e query string parametresi eklenmiş mi eklenmemiş mi bununla ilgili
+            //bilgi verir.
+
+            //Eklenen verilere Request üzerinden erişmek istiyorsak,
+            var a = Request.Query["a"].ToString();
+            var b = Request.Query["b"].ToString();
+
+            return View();
+        }
+		
+ile https://localhost:5001/product/verial?a=5&b=ahmet gittiğimiz zaman;
+
+queryString'de HasValue true olduğundan ilgili Request'de bir query olduğunu kontrol etmiş oluruz.
+
+Ya da;
+
+QueryString parametrelerine karşılık gelecek bir tür tanımlayabiliriz.
+
+		public class QueryClass
+        {
+            public int A { get; set; }
+            public string B { get; set; } 
+        }
+
+        public IActionResult VeriAl(QueryClass data) 
+        {
+            var queryString = Request.QueryString;
+            var a = Request.Query["a"].ToString();
+            var b = Request.Query["b"].ToString();
+
+            return View();
+        }
+		
+data'da içerisindeki property'lere karşılık gelen queryString değerleri otomatik eşleştirilecektir. İlgili instance'da değerleri okuyabiliriz.
+
+-----------------------
+
+Route Parameter Üzerinden Veri Alma
+
+		public IActionResult VeriAl(string id) 
+        {
+            return View();
+        }
+		
+Startup.cs'e baktığımızda endpoints.MapDefaultControllerRoute(); 'te kullanıyorsak default route'un sonunda {id?} görürüz.
+
+(Yakalamak istediğimiz rotanın isminde parametre tanımlamalıyız.)
+Bu id ile yukarıda ProductController.cs'deki kod bloğunda string id'yi eşleştirerek (object ya da int de olabilir) tarayıcıdan gönderilen değeri yakalayabiliriz. Program bunu otomatik yapacaktır.
+
+https://localhost:5001/product/verial/5 adresine gidersek, bu get isteği neticesinde, id değerinin "5" olduğunu görürüz.
+
+Ayrıca özel rotalar oluşturup da verileri yakalayabiliriz.
+
+QueryString'de olduğu gibi parametre üzerinden verileri karşılayabiliyoruz. Hatta parametre değeri karşılayabilecek bir class ile tür oluşturup onunla da karşılayabiliriz.
+
+Veya aşağıdaki gibi request üzerinden de aynı işlemi yapabiliriz.
+
+		public IActionResult VeriAl(string id) 
+        {
+            var values = Request.RouteValues;
+            return View();
+        }
+		
+Debug modunda https://localhost:5001/product/verial/5 'a gidip values'a bakarsak 3 tane Keys yakalandığını görürüz.
+
+Rotada gelen value'lar controller, action ve id parametrelerinin karşılıkları yakalanmıştır. Hatırlarsak controller ve action sistem tarafından ön tanımlı parametrelerdir.
+
+---
+
+Custom bir Route oluşturalım. (ileride daha detaylı)
+
+Startup.cs'de ilgili;
+
+			app.UseEndpoints(endpoints => 
+            {
+                endpoints.MapControllerRoute("CustomRoute", "{controller= Home}/{ Action = Index}/{a}/{b}/{id}"); //url'deki sıralama önemlidir.
+            });
+
+değişikliği yapalım. Bu rotaya istek gönderdiğimizde bu rotanın içerisindeki değerleri karşılamak istiyorsak a, b ve id olmak üzere parametreleri tanımlamamız gereklidir.
+
+		public IActionResult VeriAl(string id, string a, string b) //buradaki sıralama çokta önemli değil.
+        {
+            var values = Request.RouteValues;
+            return View();
+        }
+
+https://localhost:5001/product/verial/ali/vali/344 isteğini gönderirsek,
+
+a'da ali 
+b'de vali
+id'de 344 değerlerinin yakalandığını görürüz.
+
+Ayrıca values'da Keys'de de bu değerleri gözlemleyebiliriz.
+
+---
+
+Tür Üzerinden Route ile Yakalama
+
+		public class RouteData
+        {
+            public string A { get; set; }
+            public string B { get; set; } 
+            public string Id { get; set; }   
+        }
+
+        public IActionResult VeriAl(RouteData datas)
+        {
+            var values = Request.RouteValues;
+            return View();
+        }
+		
+aynı isteği gönderirsek aynı verilerin yakalandğını görürüz.
+
+---
+
+QueryString ile arasındaki fark güvenlik ile alakalıdır. İlgili datayı hangi değişken ile taşıdığımızı gizleme esasına dayanır.
+
+---
+
+Oluşturduğumuz URL'lerdeki Route Parametrelerine TagHelpers ile Değer Atama
+
+Bunun için yukarıda oluşturduğumuz CustomRoute'u ve Default Route'u kullanalım.
+
+			app.UseEndpoints(endpoints => 
+            {
+                endpoints.MapControllerRoute("CustomRoute", "{controller=Home}/{action=Index}/{a}/{b}/{id}");
+                endpoints.MapDefaultControllerRoute();
+            });
+			
+ve CreateProduct.cshtml'de
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@model OrnekUygulama.Models.Product
+
+<form asp-action="VeriAl" asp-controller="Product" method="post">
+    <input asp-for="ProductName" type="text" /> <br />
+    <input asp-for="Quantity" type="text" /> <br />
+    <button>Gönder</button>
+</form>
+
+@*Önce CustomRoute ile a link oluşturalım. {controller=Home}/{action=Index}/{a}/{b}/{id}
+burada ahmet, mehmet ve 123 değerleri ilgili parametrelere yerleştirilecektir.
+Tanımladığımız ama rotada olmayan farklı bir parametre olan x, QueryString olarak yerleştirilecektir.
+a,b ve id isimleri *@
+<a asp-action="Index" asp-controller="Home" asp-route-a="ahmet" asp-route-b="mehmet" asp-route-id="123" asp-route-x="ok">Content</a>
+
+Content linkinin içeriğine bakarsak;
+https://localhost:5001/Home/Index/ahmet/mehmet/123?x=ok  olduğunu görürüz.
+
+-------------------------------------
+
+Header Üzerinden Veri Alma
+
+- Headerlar, HTTP'nin hem istek hem de yanıt mesajlarında yer alan ve mesajın meta bilgilerini taşıyan bölümlerdir. Meta, bilgiyi tanımlayan bilgi anlamına gelmektedir.
+
+- Tarayıcılar istek yapmamızı sağlar fakat, header'ları manuel bir şekilde doldurmamıza müsade etmez. Fakat bunun için Postman uygulamasını kullanabiliriz.
+
+Not: Postman, API geliştirme için bir işbirliği platformudur. Postman'ın özellikleri, bir API oluşturmanın her adımını basitleştirir ve işbirliğini kolaylaştırarak daha iyi API'leri daha hızlı oluşturabilmenizi sağlar.
+
+ProductController.cs'de;
+
+		public IActionResult VeriAl()
+        {
+            var headers = Request.Headers.ToList();
+            return View();
+        }
+		
+Postman'de Request olarak https://localhost:5001/product/verial gönderirsek default olarak 6-7 tane Header oluşturulduğunu hem uygulama da hem de Visual Studio'nun headers değişkenine debug modunda bakarak görebiliriz.
+
+Custom Header oluşturmak için uygulamada Headers başlığına gelip Key kısmına Adi, Value kısmına Cagatay yazarak tekrar istek attığımızda headers değişkeninde bu değerlerin de yakalandığını görürüz.
+Bu şekilde Headerlar yardımı ile de veri alabilmekteyiz.
+
+------------------------------------
+
+AJAX ile Client Tabanlı Veri Alma
+
+- AJAX, client tabanlı istek yapmamızı ve bu isteklerin sonucunu almamızı sağlayan Javascript temelli bir mimaridir.
+AJAX, Asynchronous JavaScript and XML, Türkçe olarak Eşzamansız ve XML’in kısaltılmışıdır. Sunucuya gelen herhangi bir isteği arkaplanda işleyerek web uygulamalarının eşzamanlı olmadan 
+çalışmasına olanak sağlayan bir takım web geliştirme teknikleridir.
+
+- Bir uygulamada Client tabanlı - AJAX ile çalışabilmek için AJAX'ı destekleyen herhangi bir UI teknolojisi-kütüphanesi kullanılabilir. Biz jQuerry kullanacağız.
+
+ilgili .cshtml dosyasına <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script> ekleyelim.
+
+CreateProduct.cshtml'de;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+<button id="btnGonder">Gönder</button>
+
+<script>
+    //button nesnesine tıklandığı zaman burası tetiklensin istiyoruz.
+    $("#btnGonder").click(() => {
+        $.post("https://localhost:5001/product/verial", {a: "a data", b: "b data"}); //ile bir JS object'i gönderelim.
+    });
+
+</script>
+
+Gönder'e tıkladığımız zaman yukarıdaki adrese a ve b verileri ve değerleri aşağıdaki AjaxData türünden uygun parametreler ile yakalanacaktır.
+
+ProductController.cs'de;
+
+...
+		public class AjaxData
+        {
+            public string A { get; set; }
+            public string B { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult VeriAl(AjaxData ajaxData) 
+        //gönderilen JS object'i yakalamak için bir class oluşturup ilgili nesneyi karşılayabiliriz. İlgili dönüşümü MVC mimarisi otomatik sağlayacaktır.
+        {
+            return View();
+        }
+...
+
+- Ekstradan elimizde endpoint'e QueryString değerleri girebilir ve post neticesinde ilgili değerleri yakalayabiliriz.
+- Route parametreleri girebilir ve yakayabiliriz.
+
+- Yapmış olduğumuz isteğin illa POST olmasına gerek yoktur, GET de olabilir. Client tabanlı gelen bütün isteklerde veriye erişim kolaylığı vardır.
+
+----------------------------
+
+Tuple Nesnesi ile Post Etme ve Yakalama
+
+- “Tuple” aynı veya farklı tipten birden fazla elemanı içerebilen bir veri yapısıdır. Aslında bu tanıma baktığımızda bize “class” tanımını çağrıştırıyor gibi görünebilir. “Tuple” veri yapısı sayesinde yeni bir “class” yaratmadan da birden fazla tipteki elemanı aynı veri yapısı içerisinde tutabiliyoruz.
+
+Bazı durumlarda tuple nesnelerini Model olarak kullanmamız gerekebilir. 
+
+CreateProduct.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+@*Bir view dosyasının herhangi bir türe bind edilebilmesi için öncelikle model'ın belirtilmesi gerekmektedir. Eğer ki bir Tuple nesnesi ise yine model'da o Tuple nesnesinin türünün
+belirtilmesi gerekmektedir.*@
+@model (OrnekUygulama.Models.Product product, OrnekUygulama.Models.User user)
+@*Product ve User olmak üzere iki tane nesneyi barındıran bir Tuple nesnesini bind edelim. İlk input'a Product'u ikinciye User'ı bind ettik. Bind edilen nesne artık tekil bir nesne değil. İçerisinde birden fazla değer barındrabilen bir Tuple nesnesidir.*@
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" asp-for="product.ProductName" placeholder="Product Name" /> <br /> 
+    <input type="text" asp-for="user.Name" placeholder="Name" /> <br />
+    <button>Gönder Babuş</button>
+
+</form>
+
+ProductController.cs;
+
+using System.Linq;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {        
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+
+        //Tuple nesneleri ile post edilen verileri yakalamak için özel bir çalışma gereklidir. 
+        //Sadece Post fonksiyonu olan public IActionResult CreateProduct((Product product, User User) model){return View();} ile bunu başaramayız.
+        //Eğer ki bind mekanizmasında Tuple türde bir nesne kullanıyorsak bu tuple nesnenin içerisindeki dataların oluşturulup verilmesi gerekmektedir. Yoksa null hatası alınır. 
+        //bu işlemi de ilgili formu açacak olan Get fonksiyonu ile yaparız.
+
+        public IActionResult CreateProduct()
+        {
+            var tuple = (new Product(), new User()); //sıraya uygun Product ve User nesneleri oluşturalım.
+            return View(tuple); //ve gönderelim. Artık .cshtml'e gelen Tuple'ın içerisindeki nesneler null değildir. İçerisi dolu değildir ama null da değildir.
+        }
+
+        //Null olmadığından ilgili property'ler sorunsuzca bind edilecektir.
+        [HttpPost]
+        public IActionResult CreateProduct((Product product, User User) model)
+        {
+            return View();
+        }
+
+    }
+}
+
+https://localhost:5001/Product/CreateProduct'a gidip formu doldurup Gönder'e bastığımız an yine hata alırız.
+
+InvalidOperationException: Could not create an instance of type 'System.ValueTuple`2[[OrnekUygulama.Models.Product, OrnekUygulama, .....
+
+E peki nasıl karşıyacağız kardeşim bu nesneyi?
+
+		[HttpPost]
+        public IActionResult CreateProduct(Product product, User User) //ile parametrelerle yakalayabiliriz.
+        {
+            return View();
+        }
+		
+bu seferde Gönder'e tıkladığımızda ilgili action request'i karşılayacak fakat product ve user herhangi bir veri yakalamamış olacaktır.
+
+Hangi nesneye ait parametre olduklarını bind ederek bildirmemiz lazım.
+
+		[HttpPost]
+		public IActionResult CreateProduct([Bind(Prefix ="Item1")] Product product, [Bind(Prefix = "Item2")] User User)
+        {
+            return View();
+        }
+
+bu şekilde düzenleyip çalıştırdığımızda ilgili Tuple'a bind edilen nesnelerin parametreler ile yakalandığını göreceğiz.
+
+Not: Her ne kadar cshtml'de product ve user olarak isimlendirsekte @model (OrnekUygulama.Models.Product product, OrnekUygulama.Models.User user),
+Prefix'te Bind ederken Item1 ve Item2 olarak isimlendirmemiz gerekmektedir.
+
+https://localhost:5001/product/createproduct'e iistek gönderildiğinde form'u doldurup Gönder'e tıklarsak artık yukarıdaki Post fonksiyonunda ilgili verilerin yakalandığını görürüz.
+

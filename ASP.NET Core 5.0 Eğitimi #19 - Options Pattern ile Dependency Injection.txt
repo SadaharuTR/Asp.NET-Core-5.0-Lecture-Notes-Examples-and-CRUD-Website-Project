@@ -1,0 +1,173 @@
+- Asp.NET Core, konfigürasyonel ayarları uygulamaya hızlı bir şekilde enjekte edebilmemiz için Options Pattern’i bizlere sunmaktadır. Bu desen sayesinde “appsettings.json” dosyasındaki kayıtları yapılandırılmış bir şekilde uygulamaya Dependency Injection ile dahil edebilmekte ve pratik bir şekilde talep ederek, kullanabilmekteyiz.
+
+Klasik yöntemle başlayalım.
+Index() üzerinden mail göndereceğimiz bir yapılanma ayarlayalım.
+
+appsettings.json'da;
+
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "MailInfo": {
+    "Port": "587",
+    "Host": "smtp.gmail.com",
+    "EmailInfo": {
+      "Email": "cagatay333tr@gmail.com",
+      "Password": "12345"
+    }
+  }
+}
+
+Bunu uygulama içinde kullanmak istiyorsak IConfiguration üzerinden Dependency Injectionile bu arayüzü talep ediyoruz,
+bu arayüzün temsil edeceği nesne her ne ise ilgili .NET çekirdeğinde mevcut olduğundan bize gelecektir.
+
+Gelen nesne üzerinden appsettings.json'daki herhangi bir konfigürasyonu okuyabiliriz.
+
+HomeController.cs'de;
+
+		public IActionResult Index()
+        {
+            string host = _configuration["MailInfo:Host"];
+            string port = _configuration["MailInfo:Port"];
+            //Bunun daha kolay bir yolu yok mu? Tek tek yazacak mıyız?
+
+            //_configuration.GetSection("MailInfo").Get<T>(); 'de bir yol. Ya da typeof ile alabiliriz.
+            //Fakat biz MailInfo'yu modelleyerek çözüm arayalım.
+
+            return View();
+        }
+		
+Şimdi Models klasöründe MailInfo sınıfı oluşturalım.
+
+namespace configurationExample.Models
+{
+    public class MailInfo
+    {
+        public string Port { get; set; }
+        public string Host { get; set; }
+
+        public EmailInfo EmailInfo { get; set; }
+    }
+
+    public class EmailInfo
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
+    }
+}
+
+Artık appsettings.json'daki dosyaların nesnel karşılığını elde edebiliriz.
+
+Property isimleri ile konfigürasyon isimlerinin aynı olmasına dikkat edilmelidir.
+
+HomeController.cs'e geri dönersek Index() içerisinde;
+
+		public IActionResult Index()
+        {
+			//Manuel Yöntem;
+            string host = _configuration["MailInfo:Host"];
+            string port = _configuration["MailInfo:Port"];
+            //Bunun daha kolay bir yolu yok mu? Tek tek yazacak mıyız?
+
+            //_configuration.GetSection("MailInfo").Get<T>(); 'de bir yol. Ya da typeof ile alabiliriz.
+            //Fakat biz MailInfo'yu modelleyerek çözüm arayalım.
+
+            MailInfo mailInfo = _configuration.GetSection("MailInfo").Get<MailInfo>();
+            //Bu çalışma neticesinde artık MailInfo konfigürasyonu içerisindeki tüm bilgileri MailInfo türünden
+            //bir nesne ile elde edebileceğiz.
+
+            return View();
+        }
+		
+Eee peki Options Pattern bize ne sunuyor?
+
+- Sürekli, belirli noktalarda kullandığımız konfigürasyonel değerler var. Bu değerleri Dependency Injection'da kullanabilmek istiyoruz. DI ile direkt nesnel olarak bu verileri talep edebilmek için bu konfigürasyonel yapıları yani appsettings.json içerisindeki belirli parçaları IoC yapılanmasının Container'ına bir nesne karşılığında eklememiz lazım.
+
+Bunu yapabilmemizi ve istediğimiz zaman çağırabilmemizi sağlayan yapılanma Options Pattern'dir.
+
+Startup.cs'e uğrayalım. IoC Container'a eklemek için services parametresini kullanalım.
+
+namespace configurationExample
+{
+    public class Startup
+    {
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public IConfiguration Configuration { get; }
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+            //IoC'ye MailInfo türünden bir nesne koy. GetSection ile hangi bölümü hedef göstereceksek onun
+            //ismini bildirip, altındakileri de bildirmiş olduğumuz Generic türe dönüştürüp IoC Container'ıne
+            //ilgili nesneyi veriyoruz.
+            services.Configure<MailInfo>(Configuration.GetSection("MailInfo")); 
+            services.AddControllersWithViews();
+        }
+...
+
+HomeController.cs'de;
+
+namespace configurationExample.Controllers
+{
+    public class HomeController : Controller
+    {
+        readonly IConfiguration _configuration;
+        public HomeController(IConfiguration configuration) 
+        {
+            _configuration = configuration; 
+        }
+		
+artık mail ile ilgili bir konfigürasyonel değere ulaşmak istiyorsak IConfiguration'a ihtiyacımız yok.
+
+namespace configurationExample.Controllers
+{
+    public class HomeController : Controller
+    {
+        MailInfo _mailInfo;
+
+        //Verilmiş olan MailInfo türündeki konfigürasyonel nesneyi mailInfo ile getir.
+        public HomeController(IOptions<MailInfo> mailInfo) 
+        {
+            _mailInfo = mailInfo.Value;
+        }
+		...
+		
+Birden fazla konfigürasyonel değeri Startup.cs üzerinden,
+            services.Configure<MailInfo>(Configuration.GetSection("MailInfo")); 
+bu şekilde farklı türlerdeki class'lara yapılandırıp ,
+            _mailInfo = mailInfo.Value;
+istediğimiz zaman lazım olan değerleri çağırabiliriz.
+
+Artık tek yapmamız gereken _mailInfo'yu kullanmak,
+
+_mailInfo dediğimiz zaman artık bize direkt MailInfo nesnesi gelecek ve içerisinde istediğimiz değerler olacaktır.
+
+namespace configurationExample.Controllers
+{
+    public class HomeController : Controller
+    {
+        MailInfo _mailInfo;
+
+        //Verilmiş olan MailInfo türündeki konfigürasyonel nesneyi mailInfo ile getir.
+        public HomeController(IOptions<MailInfo> mailInfo) 
+        {
+            _mailInfo = mailInfo.Value;
+        }
+		
+		//Index()'te _mailInfo'yu kullanabiliriz.
+        public IActionResult Index()
+        {
+            MailInfo info = _mailInfo;
+
+            return View();
+        }
+

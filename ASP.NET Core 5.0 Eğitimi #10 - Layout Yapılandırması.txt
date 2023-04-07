@@ -1,0 +1,308 @@
+Layout Nedir?
+
+- Web sayfalarının olmazsa olmazıdır.                                                                                       
+- Sayfadan sayfaya geçerken kullanıcıya tutarlı bir deneyim sayfa taslağıdır.
+
+- Tutarlı bir düzene sahip bir web sitesi oluşturmakta kullanılır.
+
+---------------Header--------------
+--Left--				-
+--Navi--       -Content-
+--gati--				-
+--on--				-
+---------------Footer---------------
+
+Layout dosyası özünde bir View yani .cshtml dosyasıdır. Asp.NET Core uygulamalarında,
+Genellikle Views klasörünün altında Shared dizininde bulunurlar.
+
+Shared -> Add Views -> _Layout.cshtml ile oluşturalım.
+
+@RenderBody() fonksiyonu Layout üzerinde o anki render edilen View'in result'unun nereye basılacağını ifade eden fonksiyondur.
+Sayfadan sayfaya değişkenlik gösterecek kısmı belli eder. Layout'ta tanımlanması zorunludur.
+
+_Layout.cshtml;
+
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<title>Anasayfa</title>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#">Navbar</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" aria-current="page" href="~/home/index">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="~/home/sayfa1">Sayfa 1</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="~/home/sayfa2">Sayfa 2</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="~/home/sayfa3">Sayfa 3</a>
+                </li>
+            </ul>
+        <form class="form-inline my-2 my-lg-0">
+            <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+        </form>
+    </div>
+</nav>
+
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        @RenderBody()
+    </div>
+    <div class="col-md-2"></div>
+</div>
+</body>
+</html>
+
+ve diğer .cshtml dosyaları;
+
+Index.cshtml;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+Burası Anasayfa'dır.
+
+Sayfa1.cshtml;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+Burası Sayfa 1'dir.
+
+Sayfa2.cshtml;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+Burası Sayfa 2'dir.
+
+Sayfa3.cshtml;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+Burası Sayfa 3'tür.
+
+Görüldüğü üzere sadece Layout = "~/Views/Shared/_Layout.cshtml"; ile tekrar eden ve etmeyen kısımlar için layout tanımlamamız kodu ne kadar temiz hale getirmiştir.
+
+HomeController.cs'e de bakarsak;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace LayoutExample.Controllers
+{
+    public class HomeController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+        public IActionResult Sayfa1()
+        {
+            return View();
+        }
+        public IActionResult Sayfa2()
+        {
+            return View();
+        }
+        public IActionResult Sayfa3()
+        {
+            return View();
+        }
+    }
+}
+
+---
+
+RenderSection Fonksiyonu: Layout içerisinde isimler bölümler oluşturmamızı sağlar. İhtiyaç doğrultusunda bu bölümlere render edilen view'lerden de içerikler atanabilir.
+
+İlgili Layout'u baz alan bütün View'lerde bu RenderSection kullanılmalıdır.
+İlgili view tarafından kullanılması default olarak zorunludur(yani true) o yüzden @RenderSection("solmenu", false) ikinci parametre olan Required kısmına false yazarak olası hatanın önüne geçmiş oluruz. 
+
+_Layout.cshtml'de;
+...
+<div class="row">
+    <div class="col-md-2">
+        @RenderSection("solmenu", false)
+    </div>
+    <div class="col-md-8">
+        @RenderBody()
+    </div>
+    <div class="col-md-2"></div>
+</div>
+...
+
+yazdıktan sonra örneğin Index.cshtml'de kullanmak istersek;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@*Layout'da solmenu ismindeki RenderSection'da tanımlanmış alana, View render edilirken,*@
+@section solmenu{
+    @*buradan istediğimiz değerleri gönderebiliriz.*@    
+    <p>Lorem ipsum dolor sit amet.</p>
+}
+
+Burası Anasayfa'dır.
+
+Böylece ilgili paragraf sadece Index.cshtml render edilirken gözükecektir.
+
+Sayfa2.cshtml'de de kullanabiliriz.
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+Burası sayfa 2'dir.
+
+@section solmenu{
+    <ul>
+        <li>A</li>
+        <li>B</li>
+        <li>C</li>
+        <li>D</li>
+    </ul>
+}
+
+View üzerinde section'a herhangi bir yerden değer gönderebiliriz.
+
+---
+
+Genellikle JS referansları sayfadan sayfaya fark eden alanlarda kullanılır.
+
+Kimi sayfa vardır belirli JS kütüphanelerini kullanır, kimisi kullanmaz. 
+
+_Layout.cs;
+
+<!DOCTYPE html>
+<html>
+<head>
+	RenderSection("script", false)
+<title>Anasayfa</title>
+</head>
+
+Diyelim ki A View'ini render ederken herhangi bir kütüphaneye ihtiyaç yok.
+
+Fakat B View'inde;
+
+@section script {
+	<script src="bilmemne.js" .....
+}
+
+ilgili JS kütüphanesi ile render edilecektir.
+
+---------------------------
+
+_ViewStart Dosyası Nedir?
+
+- Asıl amacı tüm view'lerde kullanılması/ yapılması gereken ortak çalışmaların yapıldığı view olmasıdır. 
+.cshtml'dir.
+
+- Bir nevi tüm view'lerin atasıdır diyebiliriz.
+
+- Views klasörünün altında _ViewStart.cshtml olarak oluşturulması gerekmektedir.
+
+- Genellikle tüm view'lerin ortak kullanılacağı Layout tanımlaması bu dosya içerisinde gerçekleştirilir.
+
+Yukarıdaki konuda olduğu gibi laout tanımlamasını her .cshtml'de ayrı ayrı yapmak kodun yönetilebilirliğini azaltacaktır. 
+
+Views -> Add Views -> Razor View -> _ViewStart.cshtml ile oluşturalım.
+
+İlgili _ViewStart dosyası öncelikli olarak render edileceğinden dolayı çıktısını sayfamızda görebiliriz, ardından o anki render edilen View hangisiyse onun çıktısını görürüz.
+
+_ViewStart.cshtml;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+Layout tanımlamasını buraya taşıyıp diğer View'lerden (sayfa1,2,3 ve index) kaldırıyoruz.
+
+Başlangıç View'ine Layout'u verdikten sonra artık hangi View'i render ediyorsak o View doğal olarak buradaki Layout dosyasını baz alıp render edilecektir.
+
+Fakat örnek olarak Sayfa2'de bu Layout'u kullanmak istemeyebiliriz. Yani _ViewStart'ı ezmek isteyebiliriz.
+
+Sayfa2.cshtml;
+
+@{
+    Layout = null;
+}
+
+Burası sayfa 2'dir.
+
+@section solmenu{
+    <ul>
+        <li>A</li>
+        <li>B</li>
+        <li>C</li>
+        <li>D</li>
+    </ul>
+}
+
+ya da başka bir layout kullanmak istersek o layout'un path'ini yazabiliriz.
+
+---
+
+_ViewImports Dosyası Nedir?
+
+- Razor sayfaları için kütüphane ve namespace tanımlamalarını sayfa sayfa farklı tanımlamaktansa ortak/merkezi olarak tanımlamamızı sağlayan bir dosyadır.
+
+- Views klasörü altında _ViewImports.cshtml isminde oluşturulmalıdır.
+
+Genellik using blokları, TagHelper'ların tanımlanması gibi çalışmalar _ViewImports'da yapılır.
+
+@model LayoutExample.Models.Product
+@using LayoutExample.Models
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+tüm .cshtml dosyalarına tek tek yazmaktansa,
+
+Views -> Add View -> Razor Page -> _ViewImports.cshtml oluşturalım.
+
+_ViewImports.cshtml;
+
+@using LayoutExample.Models
+
+artık Models namespace'i altındaki sınıflara tüm View'ler altından erişim sağlayabiliriz.
+
+Sayfa2.cshtml'de örneklendirelim;
+
+@{
+    Product -> 'a erişebiliriz.
+}
+
+<a href="#" asp-="Home"></a> -> asp-... helper'lara erişebiliriz.
+
+Burası sayfa 2'dir.
+
+@section solmenu{
+    <ul>
+        <li>A</li>
+        <li>B</li>
+        <li>C</li>
+        <li>D</li>
+    </ul>
+}

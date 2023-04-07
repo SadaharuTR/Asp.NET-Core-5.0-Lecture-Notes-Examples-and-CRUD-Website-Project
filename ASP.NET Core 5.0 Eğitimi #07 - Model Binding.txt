@@ -1,0 +1,200 @@
+Model Binding Nedir?
+
+Model Binding: View'dan post ile gönderilen verilerin Controller'ımızda bulunan Action method parametrelerine dönüştürülme işlemidir. Eğer bir Action Methodumuz parametre almış ise ve bir post işlemi kendisine geliyorsa post işlemi ilk olarak Model Binder'a düşer.
+
+Bir başka deyişle kullanıcıların form üzerinden girmiş olduğu dataları controller'lar da kendimize ait türlerde yakalamak istediğimizde
+model binding'i kullanırız. Gönderilen data bizim tanımlayıp bind ettiğimiz model'a dönüştürülüp ilgili sınıfın instance'ı üzerinden gelen dataları yönetmemizi sağlar.
+
+ProductController.cs;
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+
+        //bir action metot default olarak get türündendir. Http get isteklerini karşılar.
+        //burada herhang bir post işlemi yapılmaz.
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+
+        [HttpPost] //artık cshtml'de yazdığımız form tetiklendiğinde burası tetiklenecektir.
+        public IActionResult CreateProduct(string txtProductName, string txtQuantity) 
+        //request neticesinde gelen dataların hepsi action fonksiyonlarda parametrelerden yakalanmaktadır.
+        {
+            return View();
+        }
+    }
+}
+
+CreateProduct.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+@*Bir web uygulamasında form tetiklendiğinde içerisindeki inputların değerleri hedef endpoint'e gönderilir.(POST)*@
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" name="txtProductName" placeholder="Product Name" />
+    <br />
+    <input type="number" name="txtQuantity" placeholder="Quantity" />
+    <br />
+    <button>Ürün Ekle</button>
+
+</form>
+
+Basit formlarda bu şekilde model binding kullanmadan post işlemini yapabiliyoruz. Fakat form kompleks bir şekil aldıkça ve alınan veri sayısı arttıkça aşağıdaki gibi model binding kullanmamız gerekecektir.
+
+Models klasöründe Product.cs adlı bu verileri karşılayacak bir class oluşturalım.
+
+namespace OrnekUygulama.Models
+{
+    public class Product
+    {
+        public string ProductName { get; set; }
+        public int Quantity { get; set; }
+    }
+}
+
+bu oluşturulan model genellikle gelecek veri ile birebir uyumlu şekilde tasarlanır. İleride ViewModel konusunda detaylı.
+
+Form içerisinde input nesneleri post edildiğinde bu nesnelere karşılık gelen propertyleri barındıran bir nesneyle otomatik olarak bind edilirler.
+
+ProductController.cs;
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+
+        [HttpPost] 
+        public IActionResult CreateProduct(Product product) 
+        //gelecek verileri Product türünden bir nesne ile karşıla.
+        {
+            return View();
+        }
+    }
+}
+
+CreateProduct.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+@*Form içerisinde kullanıcıdan gelecek olan datalarda input'ların name'leri ile bu post'U karşılayacak olan action'da kullanmış olduğumuz parametrelerin eğer ki class ise property isimleri aynı olmalıdır ki sistem tarafından otomatik olarak bind edilecektir. *@
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" name="ProductName" placeholder="Product Name" />
+    <br />
+    <input type="number" name="Quantity" placeholder="Quantity" />
+    <br />
+    <button>Ürün Ekle</button>
+
+</form>
+
+----
+
+Bu işlemi daha fiziksel bir hale getirmek mümkün. input'ların  name değerini girmeden bu inputları direkt product türünden bir nesneyle otomatik bind edilebilir hale getirelim.
+
+CreateProduct.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+@model OrnekUygulama.Models.Product
+@*Sayfanın model'ının hangi input değeri yakalanacaksa o türden olmalıdır. Sayfanın modelı artık Product.
+TagHelper üzerinden asp-for ile sayfanın model'ına ait olan türün hangi property'si ile aşağıdaki inputların
+bind edileceğini bildirir.*@
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" asp-for="ProductName" placeholder="Product Name" />
+    <br />
+    <input type="number" asp-for="Quantity" placeholder="Quantity" />
+    <br />
+    <button>Ürün Ekle</button>
+
+</form>
+
+Artık tamamen ilgili propertylerin karşılığı olan değerlerin geleceğinden emin olabiliriz. Bir önceki name kullanımı yöntemi ile az da olsa hata şansı vardı.
+
+HtmlHelper ile de yapmak mümkündür.
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@model OrnekUygulama.Models.Product
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+@*    <input type="text" asp-for="ProductName" placeholder="Product Name" />
+*@    
+    @Html.TextBoxFor(x => x.ProductName, "", new{
+        placeholder = "Product Name"
+    })
+    <br />
+@*    <input type="number" asp-for="Quantity" placeholder="Quantity" />
+*@    
+    @Html.TextBoxFor(x => x.Quantity,"", new{
+    placeholder = "Quantity",
+	type="number"
+    })
+    <br />
+    <button>Ürün Ekle</button>
+
+</form>
+
+debug modunda çalıştırıp baktığımızda formdan girilen ilgili verinin Product product parametresinde yakalandığını görürüz.
+
+---
+
+Controller'dan Bind Edilmiş Model'a Instance Göndermeme Durumu
+
+- Yeri geldiğinde bir form üzerinde çalışırken o formun boş gelmesini isteyebiliriz. Bunu istiyorsak controller'da View'i render ederken herhangi bir nesne göndermemize gerek yoktur. Göndermediğimiz durumda boş bir form gelecektir.
+
+- Eğer ki controller'da get durumunda bir insatance gönderirsek gönderdiğimiz instance form'a bind edileceğinden yapmış olduğumuz değişiklikler o instance üzerinde değişecektir. Yeni nesne oluşturulmayacak, başta controller'dan gönderdiğimiz nesne gönderilecektir.
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts() 
+        {
+            return View();
+        }
+
+        public IActionResult CreateProduct()
+        {
+            var product = new Product();
+            return View(product);
+            //artık formda burada oluşturduğumuz nesne var. değişiklikler bu boş nesnenin üzerine işlenecek.
+            //haliyle form tetiklendiği zaman üzerine işlenen nesne aşağıdaki post'a gönderilmiş olacaktır.
+        }
+
+        [HttpPost] 
+        public IActionResult CreateProduct(Product product) 
+        //artık buraya gelen nesne yukarıda oluşturduğumuz nesnedir.
+        {
+            return View();
+        }
+    }
+}

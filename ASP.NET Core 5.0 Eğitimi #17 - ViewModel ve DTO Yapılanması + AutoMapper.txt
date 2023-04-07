@@ -1,0 +1,625 @@
+ViewModel Nedir?
+
+- Temelde iki farklı senaryoya karşılık sorumluluk üstlenen ve yazılım geliştiricilerin işini kolaylaştıran operasyonel nesnelerdir.
+
+1. Senaryo : OOP yapılanmasında bir modelin kullanıcıyla etkileşimi neticesinde kullanılan ve esas datanın memberlarını temsil eden ve süreçte ilgili model yerine veri taşıma/transfer operasyonunu üstlenen bir nesnedir.
+
+2. Senaryo : Birden fazla modeli/değeri/veriyi tek bir nesne üzerinde birleştirme görevi gören nesnedir.
+
+ViewModel'ı detaylı incelemeden önce çok benzetilen ve karıştırılan DTO yapılanmasını inceleyelim.
+
+DTO Nedir? - Data Transfer Object
+
+- Herhangi bir davranışı olmayan ve uygulamanın çeşitli yerlerinde yalnızca veri tüketimi ve iletimi için kullanılan, veritabanındaki herhangi bir verinin transfer nesnesidir/karşılığıdır/görünümüdür.
+
+Farkları:
+
+ViewModel: 
+- Kullanıcıya sunulacak verinin view'e uygun ya da view'in beklediği şekilde tasarlanmış modelidir.
+- Veriyi görünüm/sunum için anlamlı hale getirir.
+- İşlevsel fonksiyonlar barındırır.
+- İçerisinde bir veya daha fazla DTO temsil edebilir.
+- DTO'ya nazaran daha karmaşıktır.
+
+DTO:
+- Bir verinin genellikle de veritabanından gelen verinin transfer modellemesidir. Transfer edilecek olan ilgili verideki sadece ihtiyaç olunan dataları temsil eder.
+- Görünüm/sunum için kullanılabilir lakin bunun dışında uygulamanın herhangi bir katmanında çeşitli veri tüketimi ve transferi için de kullanılmaktadır. 
+- Herhangi bir fonksiyonellik barındırmaz.
+- Salt veriyi temsil eder.
+
+Temel Amaç Nedir?
+
+Models klasöründe Personel.cs;
+
+namespace viewModelExample.Models
+{
+    //Entity Model olduğunu varsayalım.
+    public class Personel
+    {
+        public int Id { get; set; }
+        public string Adi { get; set; }
+        public string Soyadi { get; set; }
+        public string Pozisyon { get; set; }
+        public int Maas { get; set; }
+        public bool MedeniHal { get; set; }
+
+    }
+}
+
+Personel isminde bir controller olsun ve bu controller üzerinde Personellere dair işlemler gerçekleşsin.
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace viewModelExample.Controllers
+{
+    public class PersonelController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+Index()'e sağ tıklayıp Add View diyip oluşturalım. Views -> Personel altında Index.cshtml oluştu. (Home Index.cshtml ile karıştırma)
+
+Burada bir form hazırlayıp bu formdan kullanıcıdan veri alalım. Personelin adı-soyadı gibi, bunu da veritabanına ekleyelim.
+
+@model Personel
+
+<form asp-action="Index" asp-controller="Personel" method="post">
+    <input type="text" asp-for="Adi" />
+    <input type="text" asp-for="Soyadi" />
+    <button>Gönder</button>
+</form>
+
+Personel.cs 6 adet farklı veriye sahip.
+Fakat biz burada sadece Adi ve Soyadi'ni alıyoruz. Diğerlerini kullanmacayağız.
+
+Demek ki bu view ile backend arasındaki iletişimi sağlayacak model Personel.cs olmamalı.
+
+Dolayısıyla sadece Adi ve Soyadi taşıyacak bir model tasarlamalıyız. Bu model View'i baz alarak tasarlanacağından ViewModel tasarlamış olacağız.
+
+Models klasörünün altında ViewModels klasörünü oluşturalım ve ismini anlamlı olacak şekilde PersonelCreateVM.cs koyalım.
+
+namespace viewModelExample.Models.ViewModels
+{
+    public class PersonelCreateVM
+    {
+        //ViewModel'da sadece taşınacak verilerin property'leri temsil edilir.
+        //aynı isimde vermeye dikkat edilmelidir.
+        //Çünkü AutoMapper gibi hazır kütüphanelerde dönüşüm sağlanırken eşleşen isimler kullanılır.
+        //Diğer türlü isimlendirmeler de yapılabilir ama çok önerilmez.
+        public string Adi { get; set; }
+        public string Soyadi { get; set; }
+    }
+}
+
+Artık Index.cshtml'de @model'da bildirdiğimiz tür değişecektir.
+
+_ViewImports.cshtml'de;
+
+@using viewModelExample
+@using viewModelExample.Models
+@using viewModelExample.Models.ViewModels //ile ekleyelim.
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+Sonra,
+
+Index.cshtml;
+
+@model PersonelCreateVM //olarak güncelleyelim.
+
+<form asp-action="Index" asp-controller="Personel" method="post">
+    <input type="text" asp-for="Adi" />
+    <input type="text" asp-for="Soyadi" />
+    <button>Gönder</button>
+</form>
+
+artık sadece neyi taşıayacaksak o property'leri tutan bir ViewModel ile işlem yapıyor olacağız.
+
+Buradan gönderilen data PersonelController'da yakalanırken;
+
+namespace viewModelExample.Controllers
+{
+    public class PersonelController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult Index(PersonelCreateVM personelCreateVM)
+        {
+            //... ilgili işlemler...
+            return View();
+        }
+    }
+}
+
+şeklinde işlemleri tamamlarız. Senaryo 1'i uygulamış olduk.
+
+Şimdi yukarıdaki kod bloğuna
+
+		public IActionResult Listele()
+        {
+            //Model veritabanından binlerce Personel ismi geldi varsayalım.
+            List<Personel> personeller = new List<Personel>
+            {
+                new Personel { Adi = "Ahmet", Soyadi = "Demirtas"},
+                new Personel { Adi = "Max", Soyadi = "Diablo"},
+                new Personel { Adi = "Ekşili", Soyadi = "Nintendo"},
+                new Personel { Adi = "Bura", Soyadi = "Ticus"},
+                new Personel { Adi = "Ak", Soyadi = "Saçlı"},
+                new Personel { Adi = "Kratos", Soyadi = "Sycho"},
+            };
+
+            return View(personeller);
+        }
+		
+ekleyip, View'ini oluşturalım. Şimdi bu verileri View'e gönderdiğimde Listele View'i çalıştığında bir Personel listesi alacağız.
+
+@model List<Personel>
+
+<ul>
+    @foreach (var personel in Model)
+    {
+        <li>
+            @personel.Adi - @personel.Soyadi : @personel.Pozisyon
+        </li>
+    }
+</ul>
+
+Best practice açısından hiçbir zaman veritabanından gelen veriler direkt olarak ilgili View'lere gönderilmez.
+
+MVC'de de API'da da direkt veritabanından elde edilen entity model türündeki verileri direkt client'a ya da View'e göndermeyiz.
+
+Bunları ViewModel ile belirli formatlara dönüştürür o formatlarla o şekilde göndeririz ki efektiflik sağlansın.
+
+Bu seferde ViewModels'a Listeleme işi için PersonelListeVM.cs açalım.
+
+namespace viewModelExample.Models.ViewModels
+{
+    public class PersonelListeVM
+    {
+        public string Adi { get; set; }
+        public string Soyadi { get; set; }
+        public string Pozisyon { get; set; }
+    }
+}
+
+Haliyle artık buradaki Controller'ımız ViewModel'a uygun bir şekilde verileri üretmeli ve o şekilde View'e göndermeli.
+
+		public IActionResult Listele()
+        {
+            //Model veritabanından binlerce Personel ismi geldi varsayalım.
+            List<PersonelListeVM> personeller = new List<Personel>
+            {
+                new Personel { Adi = "Ahmet", Soyadi = "Demirtas"},
+                new Personel { Adi = "Max", Soyadi = "Diablo"},
+                new Personel { Adi = "Ekşili", Soyadi = "Nintendo"},
+                new Personel { Adi = "Bura", Soyadi = "Ticus"},
+                new Personel { Adi = "Ak", Soyadi = "Saçlı"},
+                new Personel { Adi = "Kratos", Soyadi = "Sycho"},
+            }.Select(p => new PersonelListeVM //gelecek veriyi her bir personel listesini PersonelListeVM'a
+            //dönüştür.
+            {
+                Adi = p.Adi,
+                Soyadi = p.Soyadi,
+                Pozisyon = p.Pozisyon
+            }).ToList();
+
+            return View(personeller);
+        }
+		
+artık veriyi PersonelListeVM olarak gönderiyoruz. Artık Listele.cshtml view'i sadece ona göndermiş olduğumuz veri ile ilgilenecektir.
+
+@model'i güncellersek son durumda;
+
+@model List<PersonelListeVM>
+
+<ul>
+    @foreach (var personel in Model)
+    {
+        <li>
+            @personel.Adi - @personel.Soyadi : @personel.Pozisyon
+        </li>
+    }
+</ul>
+
+ekstra veri yoğunluğunu önledik.
+
+---
+
+Senaryo 2 durumuna gelirsek;
+
+Bir Model'in View'deki Etkileşimine Uygun Parçasını Temsil Etme
+
+- Bu senaryoda birden faza nesneyi tek bir nesneye bağlama durumu işlenecektir.
+
+Models klasöründe Urun.cs ve Musteri.cs açalım.
+
+Bu üç tane Personel, Urun, Musteri verilerini View'e göndermek istiyorsak,
+
+PersonelController'da;
+
+		public IActionResult Get()
+        {
+            var nesne = (new Personel(), new Urun(), new Musteri());
+            return View();
+        }
+		
+Tuple nesnesi yardımıyla Get()'in View'ine gönderebiliriz.
+
+Ya da istersek fiziksel olarak bir ViewModel oluşturarak bu işlemi gerçekleştirebiliriz.
+
+ozelVM.cs sayesinde;
+
+namespace viewModelExample.Models.ViewModels
+{
+    public class OzelVM
+    {
+        public Personel Personel { get; set; }
+        public Urun Urun { get; set; }
+        public Musteri Musteri { get; set; }
+    }
+}
+
+3 farklı nesneyi tek bir nesnede toplayıp ona göre işlemi gerçekleştirebiliriz.
+
+---
+
+Sözleşme/Kontrat Mantığı Nedir?
+
+- Backend'de üretilen bir verinin client'a gönderilmesi için tasarlanan ViewModel o işlemin sözleşmesi/kontratı olmaktadır.
+- Haliyle Backend'den gelecek datayı client'ın uygun formatta karışlayabilmesi için kesinlikle o türden bir nesne oluşturulması gerekecektir.
+
+Client tarafında Angular, React, Vue.js, jQuery vs. , Backend'den gelecek olan datayı burada karşılayacak olan bir nesne oluşturacağız ve bu bir prensip olacaktır ve oluşturmuş olduğumuz bu nesne/entity ile ilgili veriyi karşılayacağız.
+
+Yani C#'da class türünden yolladığımızı Typescript'te yakalayabilmeliyiz.
+
+---
+
+ViewModel'larda Validation Durumları
+
+- Kullanıcıdan alınan veriler iş kuralı gereği kontrol edilirler. Bizler bu kontrollere validation diyoruz.
+
+- Kullanıcılardan gelen veriler kesinlikle veritabanı tabloların karşılığı olan entity modelleri olmamalıdır!
+ViewModel olarak alınmalıdır. Tüm validation'lar bu ViewModel nesneleri üzerinde gerçekleşmelidir.
+
+Validation'lar için Fluent Validation kütüphanesi ya da Data Annotations'ları kullanabiliriz.
+
+Eğer ki validasyonları Entity Model'ımız olan Personel.cs üzerinde yaparsak ve verileri buradan taşısaydık validasyona takılan ama taşımak istemediğimiz veriler olacağından hatalar alacaktık.
+
+Yani Personel eklemeye dair validasyonlar PersonelCreateVM'da olmalıdır.
+Operasyonlar ve o operasyonlara karşılık gelecek validasyonlar ilgili ViewModel'larda bulunmalıdır.
+
+using System.ComponentModel.DataAnnotations;
+
+namespace viewModelExample.Models.ViewModels
+{
+    public class PersonelCreateVM
+    {
+        [Required]
+        public string Adi { get; set; }
+        [Required]
+        public string Soyadi { get; set; }
+    }
+}
+
+Personel ekleme operasyonun Adi ve Soyadi girilmesini zorunlu tuttuk.
+
+---
+
+ViewModel'ı Entity Model'a Dönüştürme
+
+- Kullanıcıdan gelen dataları ViewModel ile karşıladıktan sonra bu ViewModel'daki verileri veritabanına kaydetmek isteyebiliriz. Bu durumda, bu verileri Entity Model'a dönüştürmemiz gerekecektir. Bunun için aşağıdaki yöntemlerden biri kullanılabilir.
+
+- Manuel Dönüştürme
+- Implicit Operator Overload ile Dönüştürme
+- Explicit Operator Overload ile Dönüştürme
+- Reflection ile Dönüştürme
+- AutoMapper Kütüphanesi ile Dönüştürme
+
+Not: Kullanıcıdan gelen saf dataları temsil eden ViewModel'lar bizim için esasında DTO nesneleridir. 
+
+-> Manuel Dönüştürme
+
+		[HttpPost]
+        public IActionResult Index(PersonelCreateVM personelCreateVM)
+        {
+            Personel p = new Personel() { 
+                Adi = personelCreateVM.Adi,
+                Soyadi = personelCreateVM.Soyadi
+            };
+            //buradan p nesnesini istediğimiz gibi kullanabiliriz.
+            //Genellikle gerçek entity model nesnesini veritabanına ilgili datayı kaydetmek için kullanırız.
+            return View();
+        }
+		
+-> Implicit Operator Overload ile Dönüştürme
+
+Ya Personel.cs'i PersonelCreateVM'a ya da PersonelCreateVM'ı Personel.cs'a dönüştüreceğiz. Bunun için her iki nesneden birinin sınıfında çalışma yapmamız yeterli olacaktır. Yani iki tür dönüşümü de tek .cs'de haleldebiliriz.
+
+Personel.cs'e gelirsek;
+
+using viewModelExample.Models.ViewModels;
+
+namespace viewModelExample.Models
+{
+    //Entity Model
+    public class Personel
+    {
+        public int Id { get; set; }
+        public string Adi { get; set; }
+        public string Soyadi { get; set; }
+        public string Pozisyon { get; set; }
+        public int Maas { get; set; }
+        public bool MedeniHal { get; set; }
+
+        #region Implicit (Bilinçsiz Tür Dönüşümü)
+        public static implicit operator PersonelCreateVM(Personel model)//Personel'i PersonelCreateVM dönüştür.
+        {
+            return new PersonelCreateVM
+            {
+                Adi = model.Adi,
+                Soyadi = model.Soyadi
+            };
+        }
+
+        public static implicit operator Personel(PersonelCreateVM model)//PersonelCreateVM'i Personel'a dönüştür.
+        {
+            return new Personel
+            {
+                Adi = model.Adi,
+                Soyadi = model.Soyadi
+            };
+        }
+        #endregion
+    }
+}
+
+Bu işlemleri birebir PersonelCreateVM.cs'da da gerçekleştirebilirdik.
+
+Artık operasyonu gerçekleştirebileceğimiz PersonelController.cs'a gelirsek;
+
+		[HttpPost]
+        public IActionResult Index(PersonelCreateVM personelCreateVM)
+        {
+            #region Implicit
+            Personel personel = personelCreateVM;
+			//Burada atamış olduğumuz personelCreateVM nesnesini aslında Personel içerisinde tanımlamış olduğumuz 
+			//public static implicit operator Personel(PersonelCreateVM model) temsil etmektedir.
+			
+			PersonelCreateVM vm = personel; //ile tersine işlemi yapabiliriz.
+			
+            #endregion
+			
+            return View();
+        }
+		
+-> Explicit Operator Overload ile Dönüştürme
+
+using viewModelExample.Models.ViewModels;
+
+namespace viewModelExample.Models
+{
+    //Entity Model
+    public class Personel
+    {
+        public int Id { get; set; }
+        public string Adi { get; set; }
+        public string Soyadi { get; set; }
+        public string Pozisyon { get; set; }
+        public int Maas { get; set; }
+        public bool MedeniHal { get; set; }
+
+        #region Explicit
+        public static explicit operator PersonelCreateVM(Personel model)//Personel'i PersonelCreateVM dönüştür.
+        {
+            return new PersonelCreateVM
+            {
+                Adi = model.Adi,
+                Soyadi = model.Soyadi
+            };
+        }
+
+        public static explicit operator Personel(PersonelCreateVM model)//PersonelCreateVM'i Personel'a dönüştür.
+        {
+            return new Personel
+            {
+                Adi = model.Adi,
+                Soyadi = model.Soyadi
+            };
+        }
+        #endregion
+    }
+}
+
+ve PersonelController.cs'de;
+
+		[HttpPost]
+        public IActionResult Index(PersonelCreateVM personelCreateVM)
+        {
+			//artık bilinçli olarak belirtmemiz lazım.
+            #region Explicit
+            Personel p = (Personel)personelCreateVM;
+            PersonelCreateVM p2 = (PersonelCreateVM)p;
+            #endregion
+            return View();
+        }
+		
+-> Reflection ile Dönüştürme
+
+Solution'a Business klasörü ekleyip içerisinde TypeConversion.cs oluşturalım.
+
+using System.Linq;
+using System.Reflection;
+
+namespace viewModelExample.Business
+{
+    public static class TypeConversion
+    {
+        public static TResult Conversion<T,TResult>(T model) where TResult: class, new()
+        {
+            //typeof ile ilgili T'nin reflection'una girdik.
+            //GetProperties ile ilgili T'de ne kadar property varsa elde ettik.
+            //ToList() ile IEnumerable'a dönüştürüp ForEach iterasyonuna girdik.
+            TResult result = new TResult();
+            typeof(T).GetProperties().ToList().ForEach(p => //p kaynak nesnenin property'si.
+            {
+                //her ir turdaki property'e karşılık TResult'da ilgili property'i elde edip o property
+                //üzerinde gerekli dönüşümü sağlayacağız. Aynı isimlendirme burada yardımcı olacaktır.
+                PropertyInfo property = typeof(TResult).GetProperty(p.Name); //hedef nesnenin property'si.
+                //p'den veriyi alıp property'e atayacağız.
+                property.SetValue(result, p.GetValue(model));
+                //model objesi içerisindeki property'e karşılık olan değeri al, result objesine ver.
+            });
+            return result;
+        }
+    }
+}
+
+Artık PersonelController.cs'de Reflection üzerinden tür dönüşümünü sağlayabiliriz.
+
+		[HttpPost]
+        public IActionResult Index(PersonelCreateVM personelCreateVM)
+        {           
+            #region Reflection
+            //Personel türünden elde etmek için.
+            Personel p = TypeConversion.Conversion<PersonelCreateVM, Personel>(personelCreateVM);
+
+            //PersonelListeVM'da eşleşen değerlere ilgili değerleri atayıp, nesne oluşturup geri dönecektir.
+            PersonelListeVM personelListeVM =  TypeConversion.Conversion<Personel, PersonelListeVM>(new Personel
+            {
+                Adi = "Cagatay",
+                Soyadi = "Demirtas",
+                Maas = 1500
+            });
+            #endregion
+            return View();
+        }
+		
+-> AutoMapper Kütüphanesi Yöntemi ile Dönüştürme
+
+Package Manager Console'a Install-Package AutoMapper yazıp enter diyelim.
+
+AutoMapper'ı kullanırken yapılması gereken çalışma bir DTO nesnesi oluşturmaktır ve ona göre konfigürasyon sağlamaktır.
+Bizim buraya kadar oluşturmuş olduğumuz ViewModel'lar DTO nesnemiz olabilirler.
+Ayrıyetten sonu DTO ile biten bir .cs de oluşturabiliriz.
+
+PersonelCreateVM ya da PersonelListeVM'ı kullanalım.
+
+Solution'a AutoMappers klasörü açalım. (sonu s ile bitsin ki AutoMapper ile çakışmasın.)
+
+Hangi sınıf hangi türe dönüştürülecekse profinin oluşturulması lazım.
+
+AutoMappers'ın içine PersonelProfil.cs oluşturalım.
+
+using AutoMapper;
+using viewModelExample.Models;
+using viewModelExample.Models.ViewModels;
+
+namespace viewModelExample.AutoMappers
+{
+    public class PersonelProfil : Profile //AutoMapper'dan gelen Profile sınıfından türetmeliyiz.
+    {
+        public PersonelProfil()
+        {
+            CreateMap<Personel, PersonelCreateVM>();
+            CreateMap<PersonelCreateVM, Personel>();
+        }
+        //her iki nesne içerisinde ortak olan property'lerin değerlerini birbirine atayacaktır.
+    }
+}
+
+Artık bu PersonelProfil sınıfını bir yerde bildirmemize gerek yok. Arkaplanda AutoMapper, Reflection üzerinden ilgili profil sınıflarını bulup ona göre dönüşümü sağlıyor.
+
+Sadece Startup.cs'de ilgili kütüphanenin servisini eklememiz gerekli.
+Ekleyebilmek, yani ilgili kütüphanenin Dependency Injection'dan servislerini çağırabilmek için 
+NuGet\Install-Package AutoMapper.Extensions.Microsoft.DependencyInjection -Version 12.0.0
+package manager console ile indirmemiz lazım. (NuGet'ten de direkt olarak indirilebilir.)
+
+		public void ConfigureServices(IServiceCollection services)
+        {
+            
+            services.AddAutoMapper(typeof(PersonelProfil));
+            services.AddControllersWithViews();
+        }
+
+Artık istediğmiz herhangi bir yerde PersonelProfil'deki değerleri/yapılanmayı kullanabiliriz.
+
+Tüm çalışmaları içeren PersonelController.cs;
+
+using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
+using viewModelExample.Business;
+using viewModelExample.Models;
+using viewModelExample.Models.ViewModels;
+
+namespace viewModelExample.Controllers
+{
+    public class PersonelController : Controller
+    {
+        public IMapper Mapper { get; }
+
+        //İlgili AutoMapper'ın sınıfını kullanabilmek için Controller'on Constructor'ında 
+        public PersonelController(IMapper mapper) //IMapper isimli sınıfı çağırmamız lazım.
+        {
+            //Bu arayüz sayesinde ilgili nesne bize Dependency Injection aracılığıyla gelecktir.
+            Mapper = mapper;
+        }
+        public IActionResult Index()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult Index(PersonelCreateVM personelCreateVM)
+        {
+
+            #region Manuel
+            //Personel p = new Personel()
+            //{
+            //    Adi = personelCreateVM.Adi,
+            //    Soyadi = personelCreateVM.Soyadi
+            //};
+            //buradan p nesnesini istediğimiz gibi kullanabiliriz.
+            //Genellikle gerçek entity model nesnesini veritabanına ilgili datayı kaydetmek için kullanırız.
+            #endregion
+
+            #region Implicit
+            //Personel personel = personelCreateVM;
+            //PersonelCreateVM vm = personel;
+            #endregion
+
+            #region Explicit
+            //Personel p = (Personel)personelCreateVM;
+            //PersonelCreateVM p2 = (PersonelCreateVM)p;
+            #endregion
+
+            #region Reflection
+            ////Personel türünden elde etmek için.
+            //Personel p = TypeConversion.Conversion<PersonelCreateVM, Personel>(personelCreateVM);
+
+            ////PersonelListeVM'da eşleşen değerlere ilgili değerleri atayıp, nesne oluşturup geri dönecektir.
+            //PersonelListeVM personelListeVM =  TypeConversion.Conversion<Personel, PersonelListeVM>(new Personel
+            //{
+            //    Adi = "Cagatay",
+            //    Soyadi = "Demirtas",
+            //    Maas = 1500
+            //});
+            #endregion
+
+            #region AutoMapper
+            Personel p = Mapper.Map<Personel>(personelCreateVM);
+            PersonelCreateVM p2 = Mapper.Map<PersonelCreateVM>(p);
+            #endregion
+
+            return View();
+
+        }...
+		
+https://localhost:5001/personel/index'a istek atıp formu doldurursak p ve p2'de ilgili dönüşümlerin yapıldığını görürüz.
+

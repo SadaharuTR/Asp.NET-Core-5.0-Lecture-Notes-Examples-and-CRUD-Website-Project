@@ -1,0 +1,515 @@
+View Ekleme
+
+HomeController.cs;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace OrnekUygulama.Controllers
+{
+    public class HomeController : Controller 
+    {
+        
+        public IActionResult Index()
+        {
+            return View();
+        }
+        public IActionResult Index2()
+        {
+            return View();
+        }
+        public IActionResult Index3()
+        {
+            return View();
+        }
+    }
+}
+
+Visual Studio'da bir action'un View'ini oluşturacaksak eğer ilgili action'a sağ tıklayıp Add View...
+
+-> Razor Empty Page -> ismini verip Add dersek;
+
+Controller'ın adı neyse HomeController ise Home adında bir klasör oluşturulur. Ardından ilgili action'un belirtilen isminde bir .cshtml view dosyası ekler.
+
+Bundan sonra Index2() ile ilgili bir View oluşturmak istersek artık Home klasörü varolduğundan tekrar oluşturulmayacaktır. 
+Index1.cshtml ismini değiştirip Index2.cshtml yaparsak yukarıdaki koda uygun bir isimlendirme yapmış oluruz. Çünkü Add View... ile ilgili action'un ismi taşınmamaktadır.
+
+Index3'ün View'ini Empty olmayan Razor View ile oluşturalım. Burada View name: Index3 olarak alacaktır.
+Bizden template seçmemizi isteyecektir. Ekleme işlemi için Create, düzenleme için Edit, ya da listeleme için List template'i gibi. List'i seçelim.
+Model class: Product(OrnekUygulama.Models)
+
+Böylece editöre, bize Index3.cshtml'i oluştur ve bunun içerisinde bir Product nesnesinin listelenmesini yapan hazır bir şablon getir demiş oluruz.
+
+Oluşturulan Index3.cshtml;
+
+@model IEnumerable<OrnekUygulama.Models.Product>
+
+@{
+    ViewData["Title"] = "Index3";
+}
+
+<h1>Index3</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Id)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ProductName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Quantity)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Id)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ProductName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Quantity)
+            </td>
+            <td>
+                @Html.ActionLink("Edit", "Edit", new { /* id=item.PrimaryKey */ }) |
+                @Html.ActionLink("Details", "Details", new { /* id=item.PrimaryKey */ }) |
+                @Html.ActionLink("Delete", "Delete", new { /* id=item.PrimaryKey */ })
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+
+---
+
+Index1.cshtml'de hem html hem de C# kodları yazabiliriz.
+
+<html xmnls="http://www.w3.org/1999.xhtml">
+    <head>
+        <title></title>
+    </head>
+
+<body>
+    @{ //Razor
+        for (int i = 0; i < 100; i++)
+        {
+            
+        }
+    }
+</body>
+</html>
+
+--------------------------------------------------------------------------------
+
+Controller'dan View'e Veri Gönderme
+
+ProductController.cs;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult Index()
+        {
+            var products = new List<Product>
+            {
+                //Varsayalım ki buradaki veriler veritabanından-modeldan-servisten gelmiş olsun.
+                new Product { Id = 1, ProductName = "A Ürünü", Quantity = 10 },
+                new Product { Id = 2, ProductName = "B Ürünü", Quantity = 15 },
+                new Product { Id = 3, ProductName = "C Ürünü", Quantity = 20 }
+            };
+            //Buradaki verileri bu action'a karşılık olan .cshtml'e gönderip işlem yapmamız gerekmektedir.
+            return View();
+        }
+       
+    }
+}
+
+sağ tık Add View... ile index.cshtml'i oluşturalım.
+
+Controller'dan View'e 4 farklı şekilde veri gönderilebilir. Bu 4 farklı şeklin biri Model bazlı veri göndermekken, diğer üçü veri taşıma kontrolleri ile veri göndermektir.
+Model bazlı veri gönderiminde ekstradan kullanıcıdan veri alabilirken, veri taşıma kontrolleri ile sadece controller'dan view'e veri gönderme durumlarını gerçekleştirebiliriz.
+(istisnai durumlar olabilir.)
+
+bu 4 farklı veri gönderimini ProductController.cs üzerinde gösterelim.
+
+Model Bazlı Veri Gönderimi
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult Index()
+        {
+            var products = new List<Product>
+            {
+                //Varsayalım ki buradaki veriler veritabanından-modeldan-servisten gelmiş olsun.
+                new Product { Id = 1, ProductName = "A Ürünü", Quantity = 10 },
+                new Product { Id = 2, ProductName = "B Ürünü", Quantity = 15 },
+                new Product { Id = 3, ProductName = "C Ürünü", Quantity = 20 }
+            };
+            //Buradaki verileri bu action'a karşılık olan .cshtml'e gönderip işlem yapmamız gerekmektedir.
+
+            #region Model Bazlı Veri Gönderimi
+
+            //return View(); 
+            //Eğer ki bir veriyi View'e model bazlı göndereceksek View() fonksiyonunu direkt return etmemiz yeterlidir.
+            //View() fonksiyonu ilgili action'a karşılık gelen View'i render edecek, bir yandan da data gönderilmek istiyorsa da ikici overload'unda 
+            return View(products); //bu şekilde products isimli data'yı gönderecektir.
+
+            #endregion
+
+        }
+
+    }
+}
+
+Index.cshtml;
+
+- model keyword'ü gelen dataya göre View'i ayarlayacaktır. Bu View'e gelecek olan verinin türünü bildirmiş olduk. @Model datayı fiziksel olarak getirmek için Model keyword'ü kullanılır. Model, model'dan türü almaktadır.
+
+@model List<OrnekUygulama.Models.Product> 
+
+<ul>
+    @foreach (var product in Model)
+    {
+        <li>@product.ProductName</li>
+    }
+</ul>
+
+küçük harfle yazılan model genelde sayfanın en üstünde tanımlanır.
+
+https://localhost:5001/product/index'e gidersek
+
++A Ürünü
++B Ürünü
++C Ürünü
+
+olarak ekranda görebiliriz.
+
+İstek gönderildiğinde Index() action'u isteği karşıladı, products ile verilieri üretti, üretilen veriyi View(products) ile View'e gönderdi.
+View yani burada Index.cshtml elde ettiği veri üzerinde gerekli çalışmayı yaptı ve çıktı olarak yukarıdaki ürünlerin ismini getirdi.
+
+Çıktının kaynak koduna bakarsak tarayıcıda herhangi bir C# kodu gözükmediğini görürüz.
+
+---
+
+Veri Taşıma Kontrolleri 
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult Index()
+        {
+            var products = new List<Product>
+            {
+                //Varsayalım ki buradaki veriler veritabanından-modeldan-servisten gelmiş olsun.
+                new Product { Id = 1, ProductName = "A Ürünü", Quantity = 10 },
+                new Product { Id = 2, ProductName = "B Ürünü", Quantity = 15 },
+                new Product { Id = 3, ProductName = "C Ürünü", Quantity = 20 }
+            };
+            //Buradaki verileri bu action'a karşılık olan .cshtml'e gönderip işlem yapmamız gerekmektedir.
+
+            #region Veri Taşıma Kontrolleri
+
+            #region ViewBag
+            //View'e gönderilecek/taşınacak datayı dynamic şekilde tanımlanan bir değişkenle taşımamızı sağlayan bir veri taşıma kontrolüdür.
+            //ViewBag.products = products; //Anlamlı isimlendirme için .products denildi. ViewBag.ahmet'de denilebilirdi.
+            //Tanımladığımız dynamic değişkene elimizdeki datayı yani products'u verelim. = products;
+            //Artık View'de erişilebilir haldedir.
+            //return View();
+            #endregion
+
+            #region ViewData
+            //ViewBag'de olduğu gibi action'daki datayı View'e taşımamızı sağlayan bir kontroldür.
+            //object olarak boxing edileceği için View'de as ile unboxing edilmesi gerekmektedir.
+            ViewData["products"] = products;
+
+            #endregion
+
+            #region TempData
+            //ViewData'da olduğu gibi action'daki datayı View'e taşımamızı sağlayan bir kontroldür.
+            //Aynı şekilde object olarak boxing edileceği için View'de as ile unboxing edilmesi gerekmektedir. (farkı aşağıda)
+
+            TempData["products"] = products;
+
+            #endregion
+
+            #endregion
+
+            return RedirectToAction("Index2");
+        }
+        public IActionResult Index2()
+        {
+            //ViewBag ve ViewData'da farklı action'lara yönlendirme ile veriyi taşıyamazken TempData'da taşıyabiliriz.
+            var v1 = ViewBag.products;
+            var v2 = ViewData["products"];
+            var v3 = TempData["products"];
+
+            return View();
+        }
+    }
+}
+
+.cshtml dosyası;
+
+<h3>ViewBag</h3>
+
+@*gelecek olan data dynamic olacağından yani türü runtime'da şekilleneceğinden development(derleme) aşamasında türü belirleyebilmek için ilgili dönüşümü
+sağlamamız gerekmektedir.*@
+<ul>
+    @foreach (var product in ViewBag.products as List<OrnekUygulama.Models.Product>) //as List... ile türünü belirtmemiz lazım.
+    {
+        <li>@product.ProductName</li>
+    }
+</ul>
+
+<h3>ViewData</h3>
+
+<ul>
+    @foreach (var product in ViewData["products"] as List<OrnekUygulama.Models.Product>) //as List... ile türünü belirtmemiz lazım.
+    {
+        <li>@product.ProductName</li>
+    }
+</ul>
+
+<h3>TempData</h3>
+
+<ul>
+    @foreach (var product in TempData["products"] as List<OrnekUygulama.Models.Product>) //as List... ile türünü belirtmemiz lazım.
+    {
+        <li>@product.ProductName</li>
+    }
+</ul>
+
+Fakat burada https://localhost:5001/product/index 'e gidersek hata alırız.
+
+Bunu sebebi TempData ile kompleks türlerde çalışırken ekstra çalışmalar sergilememiz gerekmesidir.
+
+Örneği daha basitleştirirsek;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult Index()
+        {         
+            TempData["x"] = 5;
+            ViewBag.x = 5;
+            ViewData["x"] = 5;
+
+            return RedirectToAction("Index2", "Product");
+        }
+        public IActionResult Index2()
+        {
+            //ViewBag ve ViewData'da farklı action'lara yönlendirme ile veriyi taşıyamazken TempData'da taşıyabiliriz.
+            var v1 = ViewBag.products;
+            var v2 = ViewData["x"];
+            var v3 = TempData["x"];
+
+            return View();
+        }
+    }
+}
+
+Debug modunda bakarsak sadece TempData'nın ilgili veriyi 5'i taşıdığını görürüz.
+
+Yani TempData diğer ikisinden farklı olarak action'lar arasında veri taşımamızı sağlayan bir veri taşıma kontrolüdür.
+Bunu da ilgili tarayıcı üzerindeki  TempDataProvider ismindeki Cookie değeri sayesinde yapar.
+
+Burada Cookie'ye ilgili verinin dönüştürülebilmesi-serilize edilebilmesi lazım. Bu basit türlerde sorun yaratmıyor.
+Fakat ilk örnekteki gibi kompleks türlerde yani products gibi çalışırken hata vermektedir.
+
+An unhandled exception occurred while processing the request.
+InvalidOperationException: The 'Microsoft.AspNetCore.Mvc.ViewFeatures.Infrastructure.DefaultTempDataSerializer' cannot serialize an object of type 'System.Collections.Generic.List`1[OrnekUygulama.Models.Product]'.
+
+Bunun içinde JsonSerializer denilen kütüphaneyi kullanabiliriz.
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+using System.Collections.Generic;
+using System.Text.Json;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult Index()
+        {
+            var products = new List<Product>
+            {
+                new Product { Id = 1, ProductName = "A Ürünü", Quantity = 10 },
+                new Product { Id = 2, ProductName = "B Ürünü", Quantity = 15 },
+                new Product { Id = 3, ProductName = "C Ürünü", Quantity = 20 }
+            };
+
+            string data = JsonSerializer.Serialize(products);
+
+            TempData["products"] = data;
+
+            return RedirectToAction("Index2", "Product");
+        }
+        public IActionResult Index2()
+        {
+            var data = TempData["products"].ToString();
+            List<Product> products = JsonSerializer.Deserialize<List<Product>>(data);
+            return View();
+        }
+    }
+}
+
+ile sorunu çözmüş oluruz.
+
+------------
+
+View'e Tuple Nesne Gönderimi
+
+- Tuple aynı veya farklı tipten birden fazla elemanı içerebilen bir veri yapısıdır. Aslında bu tanıma baktığımızda bize “class” tanımını çağrıştırıyor gibi görünebilir. “Tuple” veri yapısı sayesinde yeni bir “class” yaratmadan da birden fazla tipteki elemanı aynı veri yapısı içerisinde tutabiliyoruz. 
+
+Önce ViewModel kullanarak elimizdeki birden fazla veriyi göndermeyi görelim.
+
+ProductController.cs;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts() 
+        {
+            Product product = new Product
+            {
+                Id = 1,
+                ProductName = "A Product",
+                Quantity = 15,
+            };
+
+            User user = new User()
+            {
+                Id = 1,
+                Name = "Ali",
+                LastName = "Tunç"
+            };
+
+            UserProduct userProduct = new UserProduct //ilgili property'lere elimizdeki nesneleri referans edelim.
+            {
+                User = user,
+                Product = product
+            };
+
+            return View(userProduct);
+        }
+    }
+}
+
+Models'ta bulunan Product.cs ve User.cs'ler;
+
+namespace OrnekUygulama.Models
+{
+    public class User
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string LastName { get; set; }
+    }
+}
+
+ve
+
+namespace OrnekUygulama.Models
+{
+    public class Product
+    {
+        public int Id { get; set; }
+        public string ProductName { get; set; }
+        public int Quantity { get; set; }
+    }
+}
+
+ViewModel, Model ile View'ı bağlayan yapıdır.  View ile Model arasında bir yapıştırıcı görevi görür. View doğrudan ViewModel yardımıyla Model'e erişir ve bazı işlemleri gerçekleştirir.
+
+Models klasörünün içerisine ViewModels adlı klasörü açıp UserProduct.cs'i ekleyelim.
+
+namespace OrnekUygulama.Models.ViewModels
+{
+    public class UserProduct
+    {
+        public Product Product { get; set; }    
+        public User User { get; set; }
+    }
+}
+
+GetProducts.cshtml ile de bu çoklu verileri görselleştirelim.
+
+@model OrnekUygulama.Models.ViewModels.UserProduct
+
+<h3>@Model.Product.ProductName</h3>
+<h3>@Model.User.Name</h3>
+
+https://localhost:5001/product/getproducts'a gidersek ekranda,
+
+A Product
+Ali
+
+yazdığını görürüz.
+
+----
+
+Peki Tuple'ı nasıl kullanabiliriz?
+
+ProductController.cs;
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts() 
+        {
+            Product product = new Product
+            {
+                Id = 1,
+                ProductName = "A Product",
+                Quantity = 15,
+            };
+
+            User user = new User()
+            {
+                Id = 1,
+                Name = "Ali",
+                LastName = "Tunç"
+            };
+
+            var userProduct = (product, user);
+
+            return View(userProduct);
+        }
+    }
+}
+
+ve GetProducts.cshtml;
+
+@*@model (OrnekUygulama.Models.Product, OrnekUygulama.Models.User) *@
+@*Gelecek olan Tuple nesnesinin türünü belirttik. @Model. dediğimizde Item1 ve Item2 olarak otomatik isimlendirecektir. Anlamlı isimlendirme için, *@
+@model (OrnekUygulama.Models.Product p, OrnekUygulama.Models.User u) 
+
+<h3>@Model.p.ProductName</h3>
+<h3>@Model.u.Name</h3>
+
+ile https://localhost:5001/product/getproducts' a gidersek;
+
+Ekranda aynı çıktıyı aldığımızı görürüz.
+

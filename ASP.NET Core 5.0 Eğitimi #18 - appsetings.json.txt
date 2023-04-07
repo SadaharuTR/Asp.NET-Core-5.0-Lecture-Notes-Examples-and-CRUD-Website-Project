@@ -1,0 +1,226 @@
+appsettings.json Dosyası Nedir?
+
+- Asp.NET Core uygulamalarında yapılandırma araçlarından birisidir.
+
+Yapılandırma: Bir uygulamanın herhangi bir ortamda gerçekleştireceği davranışı belirlememizi sağlayan statik değerin tanımlanmasıdır. Genellikle algoritmanın dışında lakin algoritmada kullanılacak değerleri belirleme sürecidir.
+
+Eski Asp.NET uygulamarında kullanılan web.config yahut Global.asax gibi dosyalar standart framework'ün yapılandırmasında kullanılan ortamlardı.
+
+Best practices açısından kodun içerisine username, password, connection string vs. gibi statik tanımlamalar yapılmamalıdır.
+
+Not: Asp.NET Core'daki  appsettings.json dışındaki yapılandırma araçları: 
+- appsettings.{Environment}.json
+- Secrets.json(Secret Manager Tools)
+- Environment Varilables
+
+Program.cs içerisinde bulunan;
+
+namespace configurationExample
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            CreateHostBuilder(args).Build().Run();
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                });
+    }
+}
+
+fonksiyonlar default olarak uygulamanın ana dizinindeki appsettings.json ya da diğer config dosyasını çeken ve uygulamaya ön bellek olarak yükleyen(içeriğini) bir donanıma sahiptir.
+
+Fakat cagatay.json dosyamız olsaydı, bu özelleştirilmiş json dosyasını uygulamaya konfigürasyon dosyası olarak dahil etmek istersek Program.cs'de bildirmemiz gereklidir.
+
+namespace configurationExample
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            CreateHostBuilder(args).Build().Run();
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+            .ConfigureAppConfiguration(b => b.AddJsonFile("cagatay.json"))
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                });
+    }
+}
+
+.ConfigureAppConfiguration(b => b.AddJsonFile("cagatay.json")) ile bu işlemi gerçekleştiriyoruz.
+
+---
+
+appsettings.json Konfigürasyonu
+
+Default olarak içeriği;
+
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*"
+}
+
+bu şekildedir.
+
+Herhangi bir Asp.NET uygulamasını oluşturduğumuzda varsayılan olarak gelen loglama mekanizması ile ilgili default konfigürasyonları barındırır.
+
+Not: JSON (JavaScript Object Notation), basit veri yapılarını temsil etmek için tasarlanmış bağımsız bir veri değişim formatıdır. Esas olarak iki sistem arasındaki veri alışverişi için kullanılır. Örneğin JSON kullanarak sunucu ile web uygulaması arasında veri aktarabilirsiniz.
+
+Nasıl veri eklenir?
+
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "OrnekMetin": "Bir kar tanesi ol kon dilimin ucunaaa...",
+  "Person": {
+    "Name ": "Cagatay",
+    "Surname" : "Demirtas"
+  }
+}
+
+OrnekMetin ve Person verilerini ekledik.
+
+Peki eklenen veri nasıl okunur?
+
+Uygulamanın herhangi bir yerinde mesela HomeController.cs'de;
+
+- IConfiguration arayüzünü kullanalım. Bu arayüz, Asp.NET Core IoC provider'ında bulunan bir servistir. Bu servis uygulamadaki appsettings.json dosyasını okumakta ve içerisindeki value'ları bizlere getirmektedir. Dolayısıyla IoC'den bu servisi herhangi bir controller'da Dependency Injection ile talep edebilir ve appsettings.json dosyasındaki konfigürüasyonları kullanabiliriz.
+
+namespace configurationExample.Controllers
+{
+    public class HomeController : Controller
+    {
+        readonly IConfiguration _configuration;
+        public HomeController(IConfiguration configuration) //Dependency Injection ile gelen nesneyi,
+        {
+            _configuration = configuration; //uygulamada her yerde kullanılabilir hale getirdik.
+        }
+		...
+		
+---
+
+Indexer ile Veri Okumak
+
+- Indexer operatörü ile ilgili key'in value'larına ve alt değerlerine erişebiliriz.
+
+		public IActionResult Privacy()
+        {
+            var v1 = _configuration["OrnekMetin"];
+            var v2 = _configuration["Person"]; //key'i bu şekilde direkt çağırdığımızda object olduğu için null dönecektir.
+            var v3 = _configuration["Person:Name"];
+            var v4 = _configuration["Person:Surname"];
+            var v5 = _configuration["Logging:LogLevel:Microsoft.Hosting.Lifetime"];
+
+            return View();
+        }
+
+Privacy() çalıştığımızdan buraya bir istek gönderdiğimizde buradaki değerlerin appsettings.json'dan çekildiğini görebiliriz.
+
+Not: Türkçe karakter kullanmayınız.
+
+---
+
+GetSection metodu ile Veri Okumak
+
+			var v6 = _configuration.GetSection("Person"); //bu şekilde string olarak getirme derdi olmadığı
+																			  //null dönmeyecektir. Ama alan içindeki value null olacaktır.
+            var v7 = _configuration.GetSection("Person:Name"); //bu şekilde değer ile birlikte elde edbiliriz.
+			string a = v7.Value; //cagatay
+			
+---
+
+Get Metodu ile Verileri Uygun Nesneyle Eşleştirme
+
+- appsettings.json'daki Person nesnesini modellemek için Models klasöründe Person.cs açalım.
+
+namespace configurationExample.Models
+{
+    public class Person
+    {
+        public string Name { get; set; }
+        public string Surname { get; set; }
+    }
+}
+
+İlgili dataların Person nesnesine atanmış hali için ;
+
+		public IActionResult Privacy()
+        {
+            var v1 = _configuration["OrnekMetin"];
+            var v2 = _configuration["Person"];
+            var v3 = _configuration["Person:Name"];
+            var v4 = _configuration["Person:Surname"];
+
+            var v5 = _configuration["Logging:LogLevel:Microsoft.Hosting.Lifetime"];
+
+            var v6 = _configuration.GetSection("Person"); //bu şekilde string olarak getirme derdi olmadığı
+                                                          //null dönmeyecektir. Ama alan içindeki value null olacaktır.
+            var v7 = _configuration.GetSection("Person:Name"); //bu şekilde değer ile birlikte elde edebiliriz.
+            string a = v7.Value; //cagatay
+
+            var v8 = _configuration.GetSection("Person").Get(typeof(Person));
+            //GetSection'da Person'daki değerleri bana Person.cs türünde ver demiş olduk.
+            return View();
+        }
+
+var v8 = _configuration.GetSection("Person").Get(typeof(Person)); ile öncelikle hangi section'da çalışacağımızı bildirip ardından Get üzerinden ilgili section eğer bir object ise (value olarak string dönmeyecek ise) belirli bir türde elde edeceğimizi belirttik.
+
+---
+
+: Operatörü 
+
+İlgili section'lar arası atlamamızı ya da bir section içerisindeki farklı bir alanı temsil etmemizi sağlayan bir operatördür.
+
+---
+
+Environment'a Göre appsettings.json Dosyası Ayarlama
+
+- ASP.NET Core, ortam değişkenini kullanarak çalışma anında uygulamanın davranışlarını yapılandırır.
+
+- Projemizin bulunduğu ortama dayalı olarak davranışlarını kontrol etmek, kabaca ortamına göre hareket etmek isteriz. Environment değişkenleri sayesinde Asp.NET COre mimarisinde geliştirdiğimiz uygulamanın çalışma ortamını belirleyebilmekte ve ortamdan ortama göre farklı değişkenler, parametreler devreye sokabilmekteyiz. (ileride detaylı)
+
+Uygulamada solution'a sağ tıklayıp properties dediğimizde karşımıza uygulamaya dair konfigürasyon yapabildiğimiz bir dosya gelmektedir. (uygulama ayarları için)
+
+Bu pencere üzerinde Debug sekmesinde Environment variables: isimli bir pencere vardır.
+
+Name:
+ASPNETCORE_ENVIRONMENT
+
+karşısında da,
+Value:
+Development yazdığını görürüz.
+
+Bu ortam-environment olarak development ortamızdayız demektir.
+
+Buraya Production yazarsak artık bu yayınlandığı/publish edildiği ortama karşılık gelir.
+Staging yazarsak ikisinin arası yani genellikle testlerin yapıldığı ortamı tarif etmiş oluruz.
+
+Kendimiz custom environment'da belirleyebiliriz.
+
+appsettings.json tüm ortamlardan ortak erişilebilir konfigürasyonları barındırırken,
+appsettings.Development.json sadece development ortamındaki konfigürüasyonlara erişmemizi sağlar.
+
+appsettings.Production.json oluşturursak da sadece production aşamasında erişilmesini istediğimiz konfigürüasyonları burada tanımlarız.
+
+- Bu şekilde konfigürasyonları parçaladığımızda bir ortamdan diğerindekine erişim yapılamaz.

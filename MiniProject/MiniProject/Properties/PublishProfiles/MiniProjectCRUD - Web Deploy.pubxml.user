@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used by the publish/package process of your Web project. You can customize the behavior of this process
+by editing this MSBuild file. In order to learn more about this please visit https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project>
+  <PropertyGroup>
+    <TimeStampOfAssociatedLegacyPublishXmlFile />
+    <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA8WwPrxNvUka6xyZWhX6GhAAAAAACAAAAAAAQZgAAAAEAACAAAABhv6b6U6vArYWcqTMvNaVffAY3s+NapSeIdbpR+L0T+AAAAAAOgAAAAAIAACAAAABgZCwKPKWfHWJh6jxg1oJ0wRj+vRWDp4zcbnvH0C7U14AAAABQwhDovQerfDZK2247WC2YL5hoP64epJkAlKKUGGgteZg0oagIwnlVvlPxuoyCOfLW4ytUDU5VsDXuiySeeFBKhVYkwBHMrBLQ04J4IYmEgURATIYXHZLXAb7haM+gUlo5oe5c89jIH4qzW+LSu1pWsZd0IPHRA+DWjpcLnsY03kAAAAAjlZHwf4H78BQRib5ZCsrOnPO7tYGC5qeB1ocd8aMlhT5rKSWEr15C5kU86ERTjYfyionVIRHdarnonSTOxzN/</EncryptedPassword>
+    <History>True|2023-04-07T16:03:29.0018208Z;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+  <ItemGroup>
+    <DestinationConnectionStrings Include="DefaultConnection">
+      <Value>Data Source=tcp:miniprojectdbserver1.database.windows.net,1433%3bInitial Catalog=MiniProject_db%3bUser Id=adminuser%40miniprojectdbserver1%3bPassword=admin123.</Value>
+    </DestinationConnectionStrings>
+  </ItemGroup>
+  <ItemGroup>
+    <EFMigrations Include="MiniProject.Data.ApplicationDbContext">
+      <Value>Data Source=tcp:miniprojectdbserver1.database.windows.net,1433%3bInitial Catalog=MiniProject_db%3bUser Id=adminuser%40miniprojectdbserver1%3bPassword=admin123.</Value>
+    </EFMigrations>
+  </ItemGroup>
+</Project>

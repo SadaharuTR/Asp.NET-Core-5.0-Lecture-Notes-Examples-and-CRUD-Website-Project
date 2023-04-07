@@ -1,0 +1,235 @@
+Custom Route Handler
+
+- Eğer controllerdan geçmesini istemediğiniz bir istek yapmak istersek custom Route Handler oluşturabiliriz.
+
+Herhangi bir belirlenmiş route şemasının, controller sınıflarından ziyade business mantığında karşılanması ve orada iş görüp response'un dönüşmesi operasyonudur.
+
+Genel geçer operasyonlarda klasik Controller mekanizmasıyla gelen requesti karşılayıp gerekli operasyonu gerçekleştireceğiz.
+Authorization, kullanıcı kaydı, kullanıcı etkileşimleri vs. bu tip işlemlerde controller'ları kullanabiliriz.
+
+Fakat bir operasyon ileri derece spesifik ise orada Custom Route Handler oluşturmak gerekebilir.
+
+---
+
+Custom Route Handler Nasıl Oluşturulur?
+
+- endpoints.Map belirli bir path için belirli bir metot çalıştırmamıza yarayabilir ve endpoints.Map metodu ikinci paramere olarak RequestDelagete döndüren bir metot alır.
+
+- RequestDelagete döndüren metodumuzu Custom Route Handler işini görmesi için oluşturduğumuz class'ın içinde kullandığımızda controller'a ihtiyaç duymadan isteği geçirebileceğiz.
+
+Fakat şimdilik class oluşturmadan devam edelim.
+
+Not: Bir delegate kendi imzasına uygun fonksiyonu temsil edebilmektedir. RequestDelagete'in imzasına bakarsak eğer ;
+
+...public delegate Tast RequestDelagete(HttpContext context);
+//ben bir delegate'im ve temsil edebileceğim metotlar; geriyeTask döndüren ve parametre olarak HttpContext türünde bir //parametre alan metotlardır. (metot ismi ve parametre ismi değişebilir.)
+
+İsimler dışında imzanın iskeleti aynı olmak zorundadır.
+
+Startup.cs'de;
+...
+			app.UseEndpoints(endpoints =>
+            {
+                //async ile geriye Task döndürmesini ve asenkron çalışmasını sağlarız.
+                endpoints.Map("example-route", async c =>
+                {
+                    //https:localhost:5001/example-route endpoint'ine gelen herhangi bir istek controller'dan 
+                    //ziyade direkt olarak buradaki fonksiyon tarafından karşılanacaktır.
+                });
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+            });
+...
+
+Bu fonksiyonu bir sınıfa koyduğumuzda artık o sınıf bizim iş mantığımızı yürüten ve ilgili request'i karşılayabilen bir sınıf olacaktır.
+
+Doğru olan da Startup.cs'i mümkün olduğunca sade tutmaktır. 
+
+---
+
+Bu işlemi class'a taşıyalım.
+
+Solutions'a Handlers isminde bir klasör oluşturalım. 
+Sonrasında yapmamız gereken tek şey;
+İçerisinde de yukarıdaki async c=> fonksiyonunu temsilen bir tane imzalı metot oluşturmaktır.
+
+ExampleHandler.cs;
+
+using Microsoft.AspNetCore.Http;
+
+namespace CustomRouteHandler.Handlers
+{
+    public class ExampleHandler
+    {
+        public RequestDelegate Handler() //bu metot geriye RequestDelegate yani bir fonksiyon dönecektir.
+        {
+            return async c => 
+            { 
+
+            };
+        }
+    }
+}
+
+ve Startup.cs'de;
+
+			app.UseEndpoints(endpoints =>
+            {
+                ////async ile geriye Task döndürmesini ve asenkron çalışmasını sağlarız.
+                //endpoints.Map("example-route", async c =>
+                //{
+                //    //https:localhost:5001/example-route endpoint'ine gelen herhangi bir istek controller'dan 
+                //    //ziyade direkt olarak buradaki fonksiyon tarafından karşılanacaktır.
+                //});
+
+                //Yukarıdaki işlemi ExampleHandler.cs'e taşıdığımızdan;
+                //class'tan bir nesne oluşturup bu nesne üzerinden Handler() fonksiyonunu çağır,
+                //diyerek yukarıdaki işlemin aynısını gerçekleştirmiş olduk.
+                endpoints.Map("example-route", new ExampleHandler().Handler());
+
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+            });
+			
+artık example-route'a gelen request ExampleHandler() sınıfındaki Handler() fonksiyonu tarafından karşılansın demiş olduk.
+
+Bu sayede bu fonksiyon içerisinde de farklı işlemler yapabiliriz. Bu işlemlerin dışında delegate'in temsil edeceği async fonksiyonunda da ekstradan farklı işlemler sağlayıp sadece request'e özel operasyonları gerçekleştirebiliriz.
+
+		public RequestDelegate Handler() //bu metot geriye RequestDelegate yani bir fonksiyon dönecektir.
+        {
+            return async c => 
+            {
+                await c.Response.WriteAsync("Hello World!");
+            };
+        }
+		
+https://localhost:5001/example-route 'a gittiğimizde ekrana Hello World! yazısının geldiğini görürüz.
+
+---
+
+Custom Route ile Resim Boyutlandırma
+
+- Web uygulamalarında genellikle, kullanılan resim dosyalarının server tarafında boyutlandırıldığını ele alalım. Bu işlemi yaparken de Custom Route Handler üzerinden gerçekleştirelim.
+
+- Resim boyutlandırması html tabanlı yapıldığı zaman ana dosya gönderilip daha sonra height ve width değerleri ile küçültme-büyültme işlemleri yapılmaktadır. 
+
+- Bunu server tarafında yaptığımızda gerekli durumlara göre resmin küçültülüp veya büyütülüp gönderilmesini sağlayabilir ve performans kazancı elde edebiliriz. Bunu controller'da yapmak yerine sadece bu işi yapması için bir Custom Route oluşturmak daha mantıklı ve efektif olacaktır.
+
+Handlers klasörünün altında ImageHander.cs oluşturalım.
+
+using Microsoft.AspNetCore.Http;
+
+namespace CustomRouteHandler.Handlers
+{
+    public class ImageHandler
+    {
+        public RequestDelegate Handler() //metot ismi değişebilir ama genellikle Handler() kullanılır.
+        {
+            return async c =>
+            {
+
+            };
+        }
+    }
+}
+
+Startup.cs'de;
+
+			app.UseEndpoints(endpoints =>
+            {
+                //parametre olarak fileName geliyorsa o resmin adı her neyse yakala,
+                endpoints.Map("image/{imageName}", new ImageHandler().Handler()); 
+				//ve yakaladığında ImageHander sınıfındaki Handler'ı çalıştır.
+				
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+            });
+
+imageName ile dosya ismi wwwroot içinden erişeceğiz. Resim dosyalarını direkt wwwroot'un içine kopyala yapıştır yapabiliriz.
+(statik dosya yapılanması konusu ileride, bir asp.net uygulamasında ses, video, resim, pdf, vss, js bu tarz dosyaların hepsi wwwroot'da bulundururuz. Ve bu dosyalara erişebilmek için Startup.cs'deki app.UseStaticFiles() isimli middleware'in çağrılması gerekmektedir.)
+
+image/image1.jpg dendiği zaman, şu resim dosyasını geri döndür fakat dosya olarak değil response olarak, sayfanın formatını yani content type'ını (yani burada jpg) ayarlayıp döndür demiş olacağız. Yani response, resim formatında olacak.
+
+Startup.cs'de;
+public void Configure(IApplicationBuilder app, IWebHostEnvironment env) 'daki ikinci parametre olan IWebHostEnvironment türünden parametremiz var. Bunun içerisindeki WebRootPath dizini bizi direkt wwwroot'a götürecektir.
+
+endpoints.Map("image/{imageName}", new ImageHandler().Handler(env.WebRootPath));
+
+ve Handler'da bu path'i karşılamak için ImageHander.cs'e tekrar dönüp;
+
+Boyutlandırma operasyonu için ise MagickImage kütüphanesini kullanacağız.
+Önce NuGet Manager'dan Magick.NET-Q16-AnyCPU bulup indirelim.
+
+using ImageMagick;
+using Microsoft.AspNetCore.Http;
+using System.IO;
+
+namespace CustomRouteHandler.Handlers
+{
+    public class ImageHandler
+    {
+        public RequestDelegate Handler(string filePath)//filePath dosyanın hangi path'de olduğunu söyleyecek.
+        {
+            //dosyanın adını ise c'den bulacağız.
+            return async c =>
+            {
+                //FileInfo herhangi bir dosya ile ilgili bilgileri etmemizi sağlayan bir sınıftır.
+                FileInfo fileInfo = new FileInfo($"{filePath}\\{c.Request.RouteValues["imageName"].ToString()}");
+                //hangi dizinde hangi image'i aradığımızı request'e bildirmiş olduk.
+                //burada yukarıdaki dizine uygun olan /image1.jpg girdiğimizde gelen resim FileInfo tarafından
+                //elde edilmiş olacaktır.
+                using MagickImage magick = new MagickImage(fileInfo);
+
+                int width = magick.Width, height = magick.Height;
+                //https://localhost:5001/image/image1.jpg isteğinde varsayılan boyutları ile gelecektir.
+
+                //Fakat query string ile https://localhost:5001/image/image1.jpg?w=500&h=250
+                //gibi bir istek yaptığında width ve height değerlerini alabililiriz. Ve bu değerler üzerine
+                //biz MagickImage nesnesi üzerinden gerekli resize işlemlerini yapabilriz.
+                if (!string.IsNullOrEmpty(c.Request.Query["w"].ToString())) //request'in üzerinde w varsa,
+                    width = int.Parse(c.Request.Query["w"].ToString()); 
+                    //yani client ne gönderdiyse weight'i o formatta boyutlandır.
+                
+                if (!string.IsNullOrEmpty(c.Request.Query["h"].ToString())) //request'in üzerinde h varsa,
+                    height = int.Parse(c.Request.Query["h"].ToString());
+                    //yani client ne gönderdiyse height'ı o formatta boyutlandır.
+                
+                magick.Resize(width, height);
+
+                //artık geriye tek kalan bu resmi sayfaya response ederken content type'ı jpg olacak şekilde
+                //response etmek.
+
+                var buffer = magick.ToByteArray();
+                c.Response.Clear();
+                c.Response.ContentType = string.Concat("image/", fileInfo.Extension.Replace(".", ""));
+
+                await c.Response.Body.WriteAsync(buffer, 0, buffer.Length);
+                await c.Response.WriteAsync(filePath);
+            };
+        }
+    }
+}
+
+
+https://localhost:5001/image/image1.jpg
+https://localhost:5001/image/image2.jpg
+https://localhost:5001/image/image3.jpg
+
+isteklerinde dosya orjinal boyutları ile gelecektir.
+
+https://localhost:5001/image/image1.jpg?w=100
+https://localhost:5001/image/image2.jpg?w=100
+https://localhost:5001/image/image3.jpg?w=100
+
+width değeri 100 olarak height değeri ona göre ayarlanmış olarak gelecektir.
+
+https://localhost:5001/image/image1.jpg?h=200
+
+ile de height değeri 200 olarak width değeri ona göre ayarlanmış olarak gelecektir.
+
+Kullandığımız kütüphanenin konfigürasyonlarına göre otomatik ayarlamasız veya resmi çok büyük hale getirme gibi işlevleri de gerçekleştirebiliriz.
+
+Fakat sayfaya sağ tıklayıp indir dediğimizde resim artık kırpılmış olacağından o an ki width veya height değeri ile indirilmiş olacaktır.

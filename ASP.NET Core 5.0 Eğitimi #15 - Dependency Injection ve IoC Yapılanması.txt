@@ -1,0 +1,426 @@
+ASP.NET Core Dependency Injection & IoC Yapılanması
+
+Dependency Injection Nedir?
+
+- SOLID Prensiplerindeki D, Dependency Inversion yani bağımlılıkların ters çevrilmesi bir prensiptir. Bu prensibi pratikte somut olarak uygulama işi Dependency Injection design pattern'ıdır.
+
+- Dependency Injection, bir sınıfın/nesnenin bağımlılıklardan kurtulmasını amaçlayan ve o nesneyi olabildiğince bağımsızlaştıran bir programlama tekniği/prensibidir.
+
+A sınıfı B sınıfına ait bir nesneyi new B(); ile içerisinde çağırıyorsa bu bir bağımlılıktır.
+Bu bağımlılıktan dolayı B sınıfında yapılacak değişiklikler üretilen nesneyi de etkileyecektir.
+Ya da A sınıfının ihtiyacı değişebilir ve C sınıfını kullanması gerekebilir.
+
+İşte bu ihtiyaç bağımlılığını bir şekilde soyutlamamız lazım ki new C(); dememize gerek kalmadan yani kod satırını komple değişmeden,
+Dependency Injection ile daha efektif kod yazabiliriz.
+
+A sınıfında kullanabilmek için B ve C sınıfları dışarıdan enjekt edilebilir olsun. Bir metot/constructor/setter property vs. olsun ve türü de bu B ve C hatta D sınıflarının ortak bir atasını alan bir türden olsun.
+
+B:IClass
+C:IClass
+D:IClass
+
+IClass'dan kalıtım alsınlar.
+
+Bu sayede A sınıfında;
+
+IClass obj; yazdığımızda 3 sınıfı da karşılayacak bir kullanım yolu bulmuş olduk.
+Artık davranışa göre kodumuzu sürekli değişmek zorunda değiliz. İlgili nesneyi dışarıdan enjekte edebiliriz.
+
+IClass arayüzü sayesinde elimizdeki operasyonel sınıfları o anki algoritmaya dahil edebildik.
+
+Bu kalıtımsal stratejinin uygulanmasına Dependency Injection diyoruz.
+
+---
+
+Sonuç olarak, bir sınıf(class) içerisinde başka bir sınıfın nesnesinin new anahtar sözcüğüyle oluşturulmamasını söyleyen bir yaklaşımdır.
+
+Sınıf içerisinde ihtiyaç olan nesnenin ya constructor'dan ya da setter metoduyla parametre olarak alınması gerektiğini savunur.
+Böylece her iki sınıfı birbirinden izole etmiş olduğumuzu savunmaktadır. Bağımlılıkları soyutlamak demektir, koparmak anlamına gelmez.
+
+---
+
+IoC Nedir?
+
+- Sınfılarımızın bağımlılığını azaltmak için bağımlılıkları Dependency Injection ile dışarıdan alabiliriz demiştik.
+- Ancak bazı durumlarda sınıfımız içerisinde çok sayıda arayüze referans vermemiz gerekebilir.
+- Bu durumda her biri için Dependency Injection kodu yazmamız gerekecektir ki bu sonunda bir kod karmaşasına sebep olacaktır.
+
+Bunun için bu işlemi otomatikleştirecek bir yapı kurulması gereklidir. Bu yapıya da IoC yani Inversion of Control denmektedir.
+
+IoC Çalışma Mantığı
+
+Register ---> Container ---> Instance
+
+- Dependency Injection kullanılarak enjekte edilecek olan tüm değerler/nesneler IoC Container dediğimiz bir sınıfta tutulurlar. 
+Ve ihtiyaç doğrultusunda bu değerler/nesneler çağrılarak elde edilirler.
+
+---
+
+Asp.NET Core'da IoC Yapılanması
+
+- .NET uygulamalarında IoC yapılanması sağlayan third party framework'ler mavcuttur. (Structuremap, AutoFac, Ninject vs.)
+- Asp.NET Core mimarisi bu third party kütüphaneler kadar yetenekli olmasa içerisinde built-in(dahili) olarak IoC Container modülü barındırmaktadır.
+
+---
+
+Built-in IoC Container
+
+- İçerisine koyulacak değerleri/nesneleri üç farklı davranışla alabilmektedir.
+
+Singleton: Uygulama bazlı tekil nesne oluşturur. Tüm taleplere o nesneyi gönderir.
+
+Container	    			----> Bu talepte nesnenin herhangi bir değeri değiştiriliyorsa,
+(nesne)			nesne   ---->
+								----> Bu talepte de aynı nesne gönderileceğinden değerin değişmiş haliyle gönderilecektir.
+
+Scoped: Her request başına bir nesne üretir ve o request pipeline'ında olan tüm isteklere o nesneyi gönderir.
+
+Container	    nesne			--request--> 
+(nesne)								--request-->
+
+					nesne  			--request-->
+										--request-->
+
+					nesne			--request-->
+										--request-->
+
+Transient: Her request'in her talebilne karşılık bir nesne üretir ve gönderir.
+
+Container	    nesne			--request--> 
+(nesne)			nesne			--request-->
+					nesne  			--request-->
+					nesne			--request-->
+
+---
+
+Asp.NET Uygulamasında Örnek Servislerin Oluşturulması
+
+Solution'da Services klasörü oluşturalım. İçerisinde ConsoleLog.cs ve TextLog.cs oluşturalım.
+
+Örneğin HomeController.cs'in Index()'ine bir istek geldiğinde ConsoleLog ya da TextLog'a herhangi bir log atacaksak eğer yapmamız gereken ilgili servise erişmek ve ilgili fonksiyonlar ile loglama işlemini sağlamaktır.
+
+Bunu yaparken new ile nesne üretiyorsak bağımlılık söz konusu olur. (kötü kod)
+
+ConsoleLog.cs;
+
+namespace dependency_injection.Services
+{
+    public class ConsoleLog
+    {
+        public void Log()
+        {
+
+        }
+    }
+}
+
+TextLog.cs;
+
+namespace dependency_injection.Services
+{
+    public class TextLog
+    {
+        public void Log()
+        {
+
+        }
+    }
+}
+
+ve HomeController.cs'de,
+...
+		public IActionResult Index()
+        {
+            ConsoleLog log = new ConsoleLog();
+            log.Log();
+            return View();
+        }
+		
+uygulamayı ayağa kaldırıp Index()'e istek geldiğinde ilgili ConsoleLog nesnesi oluşturup gerekli Log tutulacaktır.
+
+Gün geldi ihtiyaç değişti.
+
+Artık ConsoleLog'da değilde TextLog'da Log tutulması istendi.
+
+Manuel olarak kaynak kodu değişmemiz gerek.
+
+		public IActionResult Index()
+        {
+            TextLog log = new TextLog();
+            log.Log();
+            return View();
+        }
+		
+efektif bir durum değil.
+
+Bağımlılığı önce soyutlamamız gerekli.
+
+---
+
+Dahili IoC Yapılanmasını Kullanmak - IServiceCollection
+
+- Bunun için Startup.cs'de ConfigureServices()'a bir uğramamız gerekli.
+
+		public void ConfigureServices(IServiceCollection services) //IServiceCollection services bu görmüş olduğumuz tür Container'ın ta kendisidir.
+        {
+            services.AddControllersWithViews();
+        }
+		
+Nasıl çalıştığını anlamak için,
+Solution'da bir class oluşturalım.
+
+.NET mimarisindeki IoC Yapılanmasını örneklendirmek için Example.cs'de;
+
+using dependency_injection.Services;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace dependency_injection
+{
+    public class Example
+    {
+        public Example()
+        {
+            //Add() fonksiyonu ile .NET mimarisinde, gelen dahili IoC mekanizmasına ilgili nesneleri ekleyebiliriz.
+
+            IServiceCollection services = new ServiceCollection(); //built-in IoC mekanizması.
+            services.Add(new ServiceDescriptor(typeof(ConsoleLog), new ConsoleLog())); //varsa propertyler, ilk değerleri de burada bildirebilir.
+            services.Add(new ServiceDescriptor(typeof(TextLog), new TextLog()));
+
+            //Container'a eklenmiş değerleri elde etmek,
+            ServiceProvider provider = services.BuildServiceProvider();
+            //BuildServiceProvider bize ilgili container'ı direkt oluşturacaktır. Artık provider olarak somut bir container'ımız var.
+            //Bu provider'ın içerisinde artık ConsoleLog ve TextLog nesneleri kesinlikle var diyebiliriz.
+
+            provider.GetService<ConsoleLog>(); //GetService ile generic olarak, bildirdiğimiz türe karşılık gelen nesne ne ise onu döndürürüz.
+            provider.GetService<TextLog>(); //Ver abine oradan TextLog nesnesi.
+        }
+    }
+}
+
+Burada IoC Yapılanmasının IServiceCollection interface'inden ibaret olan bir yapılanma olduğunu görürüz.
+
+Bu yapılanmayı bu şekilde manuel olarak kullanmıyoruz.
+
+Startup.cs'de zaten;
+
+		public void ConfigureServices(IServiceCollection services) //yapılanma mimaride parametre olarak mevcut.
+        {
+            services.AddControllersWithViews();
+        }
+		
+burada services'a vermiş olduğumuz tüm değerler ilgili mimaride oluşturacak container'a dahil edilecektir. Uygulama çalıştığında bu container'da ayağa kaldırılıp herhangi bir Controller üzerinde servise vs.
+ihtiyaç olduğu taktirde new kullanmadan ilgili nesneyi talep edebiliyoruz.
+
+Şimdi bu uygulamaya ConsoleLog.cs ile TextLog.cs'i dahil etmek için;
+
+Startup.cs'de;
+
+		public void ConfigureServices(IServiceCollection services)
+        {
+            services.Add(new ServiceDescriptor(typeof(ConsoleLog), new ConsoleLog())); //ServiceDescriptor nesnesi ile ekleme işlemini yaparız.
+            services.Add(new ServiceDescriptor(typeof(TextLog), new TextLog()));
+            services.AddControllersWithViews();
+        }
+		
+bu ekleme davranışı default olarak Singleton'dır. Add() fonksiyonu ile eklenirken Singleton davranışı ile eklenirler.
+
+Diyelim ki TextLog'un Transient davranış sergilemesi istiyoruz. (ileride detaylı)
+services.Add(new ServiceDescriptor(typeof(TextLog), new TextLog()), ServiceLifetime.Transient);
+
+Şimdilik Singleton'dan devam edelim.
+
+Biz yazılımcılar Add() fonksiyonunu çok sevmeyiz. Yok ServiceLifetime ile ekle yok typeof bunlar uğraş.
+
+		public void ConfigureServices(IServiceCollection services)
+        {
+            services.Add(new ServiceDescriptor(typeof(ConsoleLog), new ConsoleLog()));
+            services.Add(new ServiceDescriptor(typeof(TextLog), new TextLog()));
+
+            //Davranışlara göre operasyon sağlayacaksak;
+            //services.AddSingleton<ConsoleLog>(); //ConsoleLog türünden bir nesne al, almış olduğun nesneyi talep geldiğinde üret ve gönder.
+            //Singleton, Trainsient ya da Scoped bu şekilde kullanımda vermiş olduğumuz tür ne olursa olsun ondan 1 tane nesne oluşturur.
+
+            //Container'a eklenen nesnenin Constructer'ı Parametreli ise ne yapılmalı? - O zaman kendisi direkt nesne oluşturamayacak runtime'da patlayacaktır.
+            services.AddSingleton<ConsoleLog>(p => new ConsoleLog(5)); //ile new ConsoleLog(5) bu nesneyi oluştur demiş olduk. Artık container'a burada belirtmiş olduğumuz nesneyi ekler.
+
+			services.AddScoped<ConsoleLog>(); //ConsoleLog'dan nesne üretilebiliyorsa bunu kullan.
+            services.AddScoped<ConsoleLog>(p => new ConsoleLog(10)); //parametreli ise bunu.
+
+            services.AddTransient<ConsoleLog>(); //ConsoleLog'dan nesne üretilebiliyorsa bunu kullan.
+            services.AddTransient<ConsoleLog>(p => new ConsoleLog(10)); //parametreli ise bunu.
+
+            services.AddControllersWithViews();
+        }
+
+Parametreli constructor bulunduran ConsoleLog.cs;
+
+namespace dependency_injection.Services
+{
+    public class ConsoleLog
+    {
+        public ConsoleLog(int a)
+        {
+            
+        }
+        public void Log()
+        {
+            
+        }
+    }
+}
+
+---
+
+Nesne Bildirimlerinde Uyulması Gereken Abstraction Mantığı
+
+- Bu tarz çalışmalarda Container'a verilecek nesneleri bir ortak interface ile abstraction'a tabi tutarız. O interface üzerinden sisteme dahil ederiz.
+
+Services klasörünün içerisine Interfaces klasörü oluşturalım.
+
+Add Class ile ILog.cs arayüüz oluşturalım.
+
+namespace dependency_injection.Services.Interfaces
+{
+    public interface ILog
+    {
+        public void Log();
+    }
+}
+
+Ortak fonksiyonun imzasını buraya taşıdık.
+
+ConsoleLog.cs ile TextLog.cs'i ;
+
+using dependency_injection.Services.Interfaces;
+
+namespace dependency_injection.Services
+{
+    public class ConsoleLog: ILog
+    {
+        public ConsoleLog(int a)
+        {
+            
+        }
+        public void Log()
+        {
+        }
+    }
+}
+
+ve
+
+using dependency_injection.Services.Interfaces;
+
+namespace dependency_injection.Services
+{
+    public class TextLog: ILog
+    {
+        public void Log()
+        {
+
+        }
+    }
+}
+
+ILog'dan türetelim.
+
+Startup.cs'de ise;
+
+		public void ConfigureServices(IServiceCollection services)
+        {           
+            services.AddScoped<ILog>(p => new ConsoleLog(5));
+            //ihtiyaç değişti TextLog'a ihtiyaç oldu, yukarıdaki kodda sadece TextLog yazmamız yeterli.
+
+            services.AddScoped<ILog>(p => new TextLog());
+            services.AddScoped<ILog,TextLog>(); //farklı kullanımı da mevcut. Bu kullanımda,
+            //TextLog'Un ILog'dan türemesi ve parametresiz yani nesne üretilebilir bir yapısı olması gerekmektedir.
+			//Yoksa yukarıdaki gibi p => new ConsoleLog(5) parametresi cinsinden vermemiz gereklidir. 
+            services.AddControllersWithViews();
+        }
+		
+---
+
+Controller Constructor'ından Nesne Talebinde Nasıl Bulunulur?
+
+- Built-in Contianer'a eklenen nesnelere Controller'dan erişebilmek için Controller'ların Constructor'larını kullanırız.
+
+HomeController.cs'de;
+
+namespace dependency_injection.Controllers
+{
+    public class HomeController : Controller
+    {
+        readonly ILog _log; //-> ilgili nesneyi property olarak global hale getir ve istediğin yerde kullan.
+        public HomeController(ILog log) //Container'daki ILog türündeki nesneyi getir. ->
+        {
+            _log = log;
+        }
+    
+        public IActionResult Index()
+        {
+            _log.Log();
+            return View();
+        }
+
+dediğimizde;
+
+ConsoleLog.cs'de;
+
+		public void Log()
+        {
+            Console.WriteLine("Console loglama işlemi completed.");
+        }
+		
+ve TextLog.cs'de fonksiyonlarda değişiklikeri yapıp;
+
+		public void Log()
+        {
+            Console.WriteLine("Text dosyası loglama işlemi completed.");
+        }
+		
+yaptığımızda;
+
+Startup.cs'de;
+
+            services.AddScoped<ILog>(p => new ConsoleLog(5));
+			varsa programı çalıştırdığımızda Index() tetiklendiğinde konsola Console loglama işlemi completed.
+			
+			services.AddScoped<ILog>(p => new TextLog());
+			varsa programı çalıştırdığımızda Index() tetiklendiğinde konsola Text dosyası loglama işlemi completed.
+			
+yazacaktır.
+
+Farklı türlerde servisleri davranışsal olarak operasyona dahil etmek istediğimizde bu şekidle IoC yapılanması ile çözüm getirebiliriz.
+
+---
+
+Action Bazında Nesne Talebinde Nasıl Bulunulur? FromServices Attribute'u...
+
+HomeController.cs'de;
+
+public class HomeController : Controller
+    {        
+        //Controller seviyesinde ilgili nesneyi çağırmaktansa Action seviyesinde de aşağıdaki gibi çağırma operasyonu gerçekleştirilebilir.
+        //Bu log nesnesi herhangi bir post neticesinde değil direkt container'dan gelen nesne ile eşleştirilmesi bekleniyorsa [FromServices] attribute'u kullanılır.
+        public IActionResult Index([FromServices]ILog log) //hangi nesneyi bekliyorsak o nesneyi FromServices ile işaretlenmiş parametrede almamız gerekli. ILog türündeki değeri
+                                                           //services'dan yani Container'dan getir log parametresine bağla demiş olduk.
+        {
+            log.Log();
+            return View();
+        }
+		
+---
+
+View'de Nesne Talebinde Nasıl Bulunulur? @inject
+
+- MVC kullanıyorsak View dosyalarında da direkt yani Controller'a müdahele etmeden de bir inject işlemi yapabiliriz.
+
+Index.cshtml'de;
+
+@inject dependency_injection.Services.Interfaces.ILog log
+
+.... <div>...
+
+istediğimiz yerde log property'sini kullanıp gerekli operasyonu sağlayabiliriz.
+
+.... <div>...

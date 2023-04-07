@@ -1,0 +1,376 @@
+Validation Nedir?
+
+- Validation kelime anlamı ile doğrulama manasına gelmektedir. Kullanıcılar ile etkileşim halinde olan projelerde çoğunlukla kullanıcılardan bilgiler istenir. Bu bilgilerin projenin akışını bozmaması ve güvenlik zafiyeti vermemesi için belirli desen/düzen içerisinde olması gerekir.
+
+Verinin belirlenen koşullara ve amaca uygunluğu kontrol edilmelidir.
+
+Yapılan validation server tarafında ise Server Side Validation,
+Client tarafında yapılıyor ise Client Side Validation denir.
+
+Client Server'da yapılan validation işlemleri Server Side'da iş yükünü azaltmaya yardımcı olur. Fakat validation sadece Client tarafında yapılmamalıdır.
+Server tarafında da validation yapılmalıdır. Kötü niyetli bir client kullanıcısı, client'daki validation'ları aşabilir. Bu yüzden server'da da client'dan gelen verileri kontrol etmek daha güvenlidir.
+
+Validation paralel bir şekilde client ve server taraflarında uygulanmalıdır.
+
+Not: Validation'ları if else blokları vs. ile yazmak kötü kod yazımıdır.
+
+if (!string.IsNullOrEmpty(model.ProductName) && model.ProductName.Length <= 100) 
+{
+ //kötü kötü kodlar
+}
+
+Önce Product.cs'de daha action fonksiyonuna gitmeden veriyi data annotations'lar yardımı ile gerekli kontrollere tabi tutabiliriz.
+
+using System.ComponentModel.DataAnnotations;
+
+namespace OrnekUygulama.Models
+{
+    public class Product
+    {
+        [Required(ErrorMessage = "Lütfen Product Name giriniz!")]
+        [StringLength(100, ErrorMessage = "Lütfen 100 karakterden kısa bir Product Name giriniz.")]
+        public string ProductName { get; set; }
+		
+        public int Quantity { get; set; }
+		
+        [EmailAddress(ErrorMessage = "Lütfen düzgün bir email adresi giriniz!")]
+        public string Email { get; set; }
+    }
+}
+
+CreateProduct.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@model OrnekUygulama.Models.Product
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" asp-for="ProductName" placeholder="Product Name" /> 
+    <br /> 
+    <input type="number" asp-for="Quantity" placeholder="Quantity" />
+	<br /> 
+    <input type="email" asp-for="Email" placeholder="Name" />
+    <br />
+
+    <button>Gönder</button>
+
+</form>
+
+ProductController.cs;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+using System.Linq;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts()
+        {
+            return View();
+        }
+
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult CreateProduct(Product model)
+        {
+            //ModelState: MVC'de bir type'ın data annotations'larının durumunu kontrol eden ve geriye sonuç dönen bir property'dir.
+            //Burada parametre ile Product nesnesini yakaladık. Yakaladığımız anda MVC mimarisinde ModelState doğrulamaları yapmış ve neticelerini tutmaktadır.
+
+            if (!ModelState.IsValid) //doğrulamadıysan eğer kod bloğunu çalıştır.
+            {
+                //logla-kullanıcı bilgilendir vs.
+
+                //ModelState'de hangi alanın hata verdiğini aşağıdaki kod satırı ile yakalayabiliriz.
+                ViewBag.HataMesaj = ModelState.Values.FirstOrDefault(x => x.ValidationState == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid).Errors[0].ErrorMessage;
+
+                return View();
+            }
+            //işlemler-operasyonlar 
+
+            return View();
+        }
+    }
+}
+
+Bu şekilde ViewBag ile HataMesaj'ını yakalamak mümkün. Diyelim ki Product Name'i girmeyip Quantity ve Email'i girdik. Debug modda çalıştırıp ViewBag.HataMesaj'ın içeriğine bakarsak "Lütfen Product Name giriniz!"'i görürüz.
+
+Fakat bu hataları kullanıcıya da göstermek istersek .cshtml'de span ile TagHelpers'dan yararlanabiliriz.
+
+CreateProduct.cshtml'de;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@model OrnekUygulama.Models.Product
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" asp-for="ProductName" placeholder="Product Name" /><span asp-validation-for="ProductName"></span> 
+    <br /> 
+    <input type="number" asp-for="Quantity" placeholder="Quantity" /><span asp-validation-for="Quantity"></span> 
+    <br />
+    <input type="email" asp-for="Email" placeholder="Name" /><span asp-validation-for="Email"></span>
+    <br />
+
+    <button>Gönder</button>
+
+</form>
+
+ve ProductController.cs'de;
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+using System.Linq;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts()
+        {
+            return View();
+        }
+
+        public IActionResult CreateProduct()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult CreateProduct(Product model)
+        {
+            if (!ModelState.IsValid) 
+            {
+                //yapmamız gereken tek işlem gelen model'ı tekrardan View'e göndermek olacaktır.
+                //Bu şekilde ModelState'i hataları dolu şekilde gidecektir ve hata mesajlarını ilgili span'lara yerleştirecektir.
+
+                var messages = ModelState.ToList();
+
+                return View(model);
+            }
+            //işlemler-operasyonlar 
+
+            return View();
+        }
+    }
+}
+
+https://localhost:5001/Product/CreateProduct adresine gidip aynı şekilde Product Name'i boş bırakıp Quantity ve Email'i düzgün girdiğimizde ekranda kullanıcıya cshtml'de belirttiğimiz hata mesajının verildiğini görürüz.
+
+Fakat sayfayı incele dediğimizde Elements kısmında Product Name uzunluğunu kolayca 250 gibi bir sayıyla değiştirebileceğimizi görürüz. Çünkü client-side tarafında cshtml'de yaptığımız validation böyle kolayva aşılabilmektedir.
+
+Fakat 250 karakterlik değeri yazıp gönderdiğimizde yukarıda ModelState ile yaptığımız server-side validation ile doğrulanmadığından ötürü yeniden View'e gönderilecektir. View'de de ModelState'in error'ları dolu olduklarından dolayı ilgili validasyonlar bind edildikleri span'lara mesajları yerleştirecektir.
+
+Ayrıca span'lara alternatif olarak tek bir div içerisinde de hata mesajlarını gösterebiliriz.
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@model OrnekUygulama.Models.Product
+
+<div asp-validation-summary="All">
+
+</div>
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" asp-for="ProductName" placeholder="Product Name" /><span asp-validation-for="ProductName"></span> 
+    <br /> 
+    <input type="number" asp-for="Quantity" placeholder="Quantity" /><span asp-validation-for="Quantity"></span> 
+    <br />
+    <input type="email" asp-for="Email" placeholder="Name" /><span asp-validation-for="Email"></span>
+    <br />
+
+    <button>Gönder</button>
+
+</form>
+
+Tüm validasyonları çiğneyerek formu doldurduğumuzda,
+Ekran ilgili div'in içerisinde;
+
++Lütfen Product Name giriniz!
++The value '' is invalid.
++Lütfen düzgün bir email adresi giriniz!
+
+yazdığını görebiliriz.
+
+Basit bir validasyon çalışması yapıldı. 
+Data Annotations'larda tek sorumluluk prensibine aykırılık söz konusudur. ModelMetadataType ile validatation sorumluluğunu başka sınıflara yükleme ve FluentValidation kütüphanesi ile validasyon konularında daha profesyonel validasyon işlemleri yapılacaktır.
+
+-------------------------------
+
+ModelMetadataType ile Validation Sorumluluğunu Başka Sınıfa Yükleme
+
+Not: Validation'ları entity sınıflarında yani entity modellarında(veritabanındaki tablolara karşılık gelen sınıflarında) oluşturmayız. Validation'ları çoğunlukla ViewModel'larda uygulamak isteriz. Mümkün olduğunca entity modellerinda validasyon'ları data annotations attribute'larını kullanmamak lazım.
+
+- Models klasörünün altında ModelMetadataTypes adlı bir klasör oluşturalım.
+
+ProductMetadata.cs adlı bir class oluşturalım ve validation gerektiren! bütün property'leri buraya taşıyalım.
+(Önceki derste ProductName ve Email'di.)
+
+Product.cs'den validasyonları temizleyip;
+
+namespace OrnekUygulama.Models
+{
+    public class Product
+    {
+        public string ProductName { get; set; }
+        public int Quantity { get; set; }
+        public string Email { get; set; }
+    }
+}
+
+Onları oluşturduğumuz yeni ProductMetadata.cs'e taşıdık.
+
+using System.ComponentModel.DataAnnotations;
+
+namespace OrnekUygulama.Models.ModelMetadataTypes
+{
+    public class ProductMetadata
+    {
+        [Required(ErrorMessage = "Lütfen Product Name giriniz!")]
+        [StringLength(100, ErrorMessage = "Lütfen 100 karakterden kısa bir Product Name giriniz.")]
+        public string ProductName { get; set; }
+        [EmailAddress(ErrorMessage = "Lütfen düzgün bir email adresi giriniz!")]
+        public string Email { get; set; }
+    }
+}
+
+Görüldüğü üzere ProductMetadata.cs, Product.cs'in validasyon uygulanan property'lerini barındırmakta. Amaç sadece validasyon'a odaklanmış bir sınıf tasarlamaktır.
+
+Peki bu sınıfın bundan haberi var mı? Olması için Product.cs'de;
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models.ModelMetadataTypes;
+
+namespace OrnekUygulama.Models
+{
+    [ModelMetadataType(typeof(ProductMetadata))] //bu sınıftan alınacağını bildirmiş olduk.
+    public class Product //artık bu sınıfın validasyonlarının yukarıdaki,
+    {
+        public string ProductName { get; set; }
+        public int Quantity { get; set; }
+        public string Email { get; set; }
+    }
+}
+
+şeklinde düzenleme yapıyoruz.
+
+https://localhost:5001/Product/CreateProduct adresine gidip ilgili hata mesajlarını tetikleyecek şekilde formu doldurursak kodun istediğimiz şekilde çalıştığını gözlemleriz.
+
+Bu şekilde model'ımızı validasyondan arındırıp daha temiz hale getirdik. Bu şekilde validasyonel sorumluluğu farklı bir class'a yükleyip işlemlerimizi yapabildik.
+
+--------------------------
+
+FluentValidation Kütüphanesi ile Validasyon İşlemleri
+
+- FluentValidation bir veri doğrulama kütüphanesidir. FluentValidation ve benzeri ürünlerin kullanılması, verilerin doğru şekilde yani verilerin oluştururken konulmuş kısıtlamaları sağlayarak kurallara uyumlu halde olmasını ve kullanıcı ya da sistem kaynaklı hataların oluşmasını engeller.
+
+- Eğer ki Data Annotations ile validasyonel operasyonlar gerçekleştirirsek bunlar SOLID prensiplerinden Single Responsibility Principle'a uygun olmayacağından dolayı FluentValidation kütüphanesini tercih edebiliriz.
+
+Solution'a sağ tıklayıp Manage Nuget Packages'tan FluentValidation.AspNetCore'u seçip Install edelim.
+
+Bundan sonraki adım bu servisi uygulamaya entegre etmek.
+
+Bunu da Startup.cs'de ConfigureServices() içerisinde yapacağız.
+
+...
+
+public class Startup
+    {
+        
+        public void ConfigureServices(IServiceCollection services)
+        {       
+            services.AddControllersWithViews().AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<Startup>());
+        }
+        //RegisterValidatorsFromAssemblyContaining bulunduğu Assembly içerisindeki oluşturacağımız validations'ları bulunduracak olan validator sınıflarını otomatik olarak bulmamıza ve kullanmamıza yarar. Bunu da AddFluentValidation ile yapar.
+		
+		...
+		
+Geriye sadece Validation'ları ayarlamak kaldı. İlgili entegrasyon sağlandı.
+
+Models klasörünün altında Validators adlı bir dosya oluşturalım.
+
+Onun da içerisinde ProductValidator.cs isimli bir class oluşturalım. İsimlendirme önemli değil fakat ayırt edivi bir isim koymak her zaman iyidir.
+
+ProductValidator.cs;
+
+using FluentValidation;
+
+namespace OrnekUygulama.Models.Validators
+{
+    //AbstractValidator'dan kalıtım almalıdır.
+    public class ProductValidator: AbstractValidator<Product> //Product'u kullanacağımız için <Product>.
+    //Startup.cs'deki RegisterValidatorsFromAssemblyContaining<Startup> fonksiyonu uygulamadaki AbstractValidator'dan kalıtım almış tüm sınıfların bir Validator sınıfı olduğunu algılayıp bunları  yakalaycaktır.
+    {
+        public ProductValidator()
+        {
+            //Email null olmasın null ise hata mesajı versin.
+            RuleFor(x => x.Email).NotNull().WithMessage("Email boş olamaz.");
+            //Email'in email formatını kontrol etsin.
+            RuleFor(x => x.Email).EmailAddress().WithMessage("Lütfen düzgün bir e-mail adresi giriniz.");
+
+            //ProductName null ve boş olmasın.
+            RuleFor(x => x.ProductName).NotNull().NotEmpty().WithMessage("Lütfen ürüne bir isim giriniz.");
+            //ProductName 100 karakterden az olsun.
+            RuleFor(x => x.ProductName).MaximumLength(100).WithMessage("Lütfen 100 karakter sınırına uyunuz.");
+        }
+    }
+}
+
+gibi istediğimiz validasyonları belirtebiliriz.
+
+Önceki derslerdeki ProductController.cs ile CreateProduct.cshtml'i kullanalım.
+
+https://localhost:5001/Product/CreateProduct'a istek atıp formu hataları alacak şekilde doldurursak Validasyon mesajı yazmadığımız durumlar için default mesajla yazdıklarımız için ise ilgili mesaj ile ekranda karşılaşırız.
+
+-------------------
+
+Server’da ki Validation’ları Dinamik Olarak Client Tabanlı Uygulamak
+
+- Server'da tanımlanmış Validasyon'ları Client'da tekrardan yazmaya gerek kalmaksızın taşıyabiliriz. Bu işlem için 3 tane kütüphane kullanabiliriz. Birincisi jQuerry kütüphanesi, ikincisi jQuerry Validate, üçüncüsü jQuerryValidation Unobtrusive kütüphaneleridir.
+
+wwwroot'a sağ tıklayıp Add - Client-Side Library diyerek bu harici UI tabanlı kütüphaneleri yükleyebiliriz.
+
+Fakat bu kütüphaneleri ileride detaylı olarak görülecek olan wwwroot dizinine yüklememiz gereklidir.
+Bu klasöre erişebilmek için Startup.cs'de app.UseStaticFiles(); middleware'ini çağırmamız gerekmektedir. Çağırmasakta AspNetCore MVC uygulamalarında otomatik gelecektir. (ileride detaylı)
+
+Library: 
+jquery@3.6.4 
+jquery-validate@1.19.5
+jquery-validation-unobtrusive@4.0.0
+
+Install.
+
+Şimdi nerede client tabanlı validation yapacaksak bu kütüphaneleri ilgili view'de kaynak olarak göstermeliyiz.
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@model OrnekUygulama.Models.Product
+
+<script src="~/wwwroot/jquery/jquery.min.js"></script>
+<script src="~/wwwroot/jquery-validate/jquery.validate.min.js"></script>
+<script src="~/wwwroot/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+<div asp-validation-summary="All">
+
+</div>
+
+<form asp-action="CreateProduct" asp-controller="Product" method="post">
+    
+    <input type="text" asp-for="ProductName" placeholder="Product Name" /><span asp-validation-for="ProductName"></span> 
+    <br /> 
+    <input type="number" asp-for="Quantity" placeholder="Quantity" /><span asp-validation-for="Quantity"></span> 
+    <br />
+    <input type="email" asp-for="Email" placeholder="Name" /><span asp-validation-for="Email"></span>
+    <br />
+
+    <button>Gönder</button>
+
+</form>
+
+Artık mimari ekstadan kod yazmamıza gerek kalmaksızın server'daki validasyonları direkt buraya taşıyacak ve Client Tabanlı validasyon işlemlerini yapmamızı sağlayacaktır.
+
+https://localhost:5001/product/createproduct 'a gidip boş forma gönder dediğimiz an istek gitmeyecektir. Ancak uygun şekilde doldurduğumuz zaman gönder'e basıp isteği client tabanlı sağlamış olacaktır.

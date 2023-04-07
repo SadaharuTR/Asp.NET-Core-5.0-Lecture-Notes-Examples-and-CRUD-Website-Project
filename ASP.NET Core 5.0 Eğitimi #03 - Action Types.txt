@@ -1,0 +1,193 @@
+Action Türleri Nelerdir? 
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+using System.Security.Cryptography.X509Certificates;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+
+        #region ViewResult
+        //ViewResult: Response olarak bir View dosyasını(.cshtml) render etmemizi sağlayan action türüdür.
+        /*
+        public ViewResult GetProducts()
+        {
+            ViewResult result = View();
+            return result;
+        }
+        */
+        #endregion
+
+        #region PartialViewResult
+        //Yine bir View dosyasını (.cshtml) render etmemizi sağlar. ViewResult'tan temel farkı, client tabanlı yapılan AJAX isteklerinde kullanılma yatkın olmasıdır.
+        //Teknik farkı ise ViewResult_ViewStart.cshtml dosyasını baz alır. Lakin PartialViewResult ise ilgili dosyayı baz almadan render edilir.
+        /*
+        public PartialViewResult GetProducts()
+        {
+            PartialViewResult result = PartialView();
+            return result;
+        }
+        */
+        #endregion
+
+        #region JsonResult
+        //Üretilen detayı JSON türüne dönüştürüp döndüren bir action türüdür.
+        /*
+        public JsonResult GetProducts()
+        {
+            JsonResult result = Json(new Product
+            {
+                Id = 1,
+                ProductName = "Test",
+                Quantity = 15
+            });
+
+            return result;
+        }
+        */
+        //Çalıştır dersek https://localhost:5001/product/getproducts ekranında
+        /*
+          id:1
+          productName:"Test"
+          quantity:15
+
+        yazdığını görürüz. Inspect - Network - Name getproducts - Response'a bakarsak JSON formatında verinin gelmiş olduğunu görürüz.
+        Headers kısmında Response Headers'ta content-type: application/json yazdığını görürüz.
+         */
+        #endregion
+
+        #region EmptyResult
+        //Bazen gelen istekler neticesinde herhangi bir şey döndürmek istemeyebiliriz. Böyle bir durumda EmptyResult action türü kullanılabilir.
+        //Response vardır ama result'ı yoktur.
+        /*
+        public EmptyResult GetProducts() //Gelen request başarılı olacaktır. Ama geriye boş bir result döndürülecektir. Response olacaktır, ama result taşımayacaktır.
+        {
+            return new EmptyResult(); 
+        }
+        */
+        //Çalıştırıp incele dersek, Network'de Status Code: 200 dediğini görürüz bu başarılı request demektir.
+        //Response'da ise This request has no response data available yazdığını görürüz.
+
+        //Muadili olarak void kullanılabilir.
+        /*
+        public void GetProducts()
+        {
+            //....
+        }
+        */
+        #endregion
+
+        #region ContentResult
+        //İstek neticesinde cevap olarak metinsel bir değer döndürmemizi sağlar. Sayfa artık HTML değil bir text formatında döndürülür. Metin belgesi gibi düşünülebilir.
+        //JsonResult'u da ContentResult'u da genellikle AJAX tabanlı işlemlerde tercih ederiz.
+        /*
+        public ContentResult GetProducts()
+        {
+            ContentResult result = Content("Vela vela velvela. Heleloy loy loy güzel yarim esmerim oy. <br> loy");
+            return result;
+        }
+
+        //Burada <br>'yi dahil text olarak görecektir. Ekranda Vela vela velvela. Heleloy loy loy güzel yarim esmerim oy. <br> loy yazdığını görürüz.
+        */
+        #endregion
+
+        #region ViewComponentResult
+        //İsteğe cevap olarak bir ViewComponent render etmemizi sağlar. (ileride detaylı-modüler tasarım)
+        #endregion
+
+        #region ActionResult
+        //Gelen bir istek neticesinde geriye döndürülecek action türleri değişkenlik gösterebildiği durumlarda kullanılır.
+        //Tüm action türlerini karşılayan ana türdür.
+        /*
+        public ActionResult GetProducts()
+        {
+            //Json da döndürsek, Empty'de döndürsek hepsini karşılayabilir.
+            if (true)
+            {
+                //işlemler...
+                return Json(new object());
+            }
+            else if (5 == 3)
+            {
+                //cart curt
+                return Content("bir apaçi ağlıyor gözleri yaşlı.");
+            }
+            return View(); //hiçbiri değilse mesela View() döndür.
+        }
+        */
+        #endregion
+
+        #region IActionResult
+        //ActionResult'un bir interface'idir.
+        /*
+        public IActionResult GetProducts()
+        {
+            //...
+            return View();
+        }
+        */
+        #endregion
+
+    }
+}
+
+------------------
+
+NonAction ve NonController Attibute'ları
+
+- Bir controller içerisinde bir metodun action metot olmadığını ifade etmek ve bu metodun sadece bir iş mantığı üzerinden çalışacağını belirtmek istersek,
+
+ProductController.cs;
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult Index()
+        {
+			X();
+            return View();
+        }
+
+        [NonAction] //Controller içerisinde NonAction attribute'u ile işaretlenen fonksiyonlar dışarıdan request karşılamazlar.
+        public void X() //Artık sadece operatif yani algoritma barındıran/ iş mantığı yürüten bir metottur.
+        {
+
+        }
+        
+    }
+}
+
+https://localhost:5001/product/x ' e istek gönderirsek hata alırız. Çünkü x artık bir action değildir.
+
+bu şekilde [NonAction] ile işaretlememiz yetecektir. Çok önerilen bir kullanım değildir. Bir controller'ın içerisinde iş yürüten bir metot barındırmaktansa o metodu aşka bir serviste tanımlayıp oradan ilgili action'u çağırmak tavsiye edilir.
+
+Bir diğer attribute ise NonController Attibute'udur.
+
+- Bir controller sınıfını dışarıdan gelen request'i karşılayamayacak bir class haline getirmek istersek kullanırız. Controller olarak işlevselliği kalmaycaktır.
+
+
+namespace OrnekUygulama.Controllers
+{
+    [NonController] //ile artık aşağıdaki class'ı düz bir class haline getirmiş olduk. Adında Controller geçen, Controller'dan kalıtım alan sıradan çinko karbon bir sınıftır.
+    public class ProductController : Controller
+    {
+        public IActionResult Index()
+        {
+            X();
+            return View();
+        }
+
+        [NonAction] 
+        public void X() //Artık sadece operatif yani algoritma barındıran/ iş mantığı yürüten bir metottur.
+        {
+
+        }
+    }
+}
+

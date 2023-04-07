@@ -1,0 +1,170 @@
+Environment Nedir?
+
+- Bir web uygulamasında, uygulamanın bulunduğu aşamalara dayalıi davranışı kontrol etmek ve yönlendirmek isteyebiliriz.
+İşte bunun için Environment dediğimiz değişkenler mevcuttur.
+
+- Development
+- Staging
+- Production
+
+Asp.NET Core uygulamalarının runtime'daki davranışı belirlememizi sağlayan değişkenlerdir.
+
+Örneğin Development ve Production süreçlerinin farklı veritabanlarını kullanması gerekecektir. Bu veritabanlarının ortamlarına göre bilgilerini-connection string'lerini tutuyorsak eğer buna Environment Varilables denmektedir.
+
+Projeye sağ tıklayıp Properties'te Debug kısmında Environment Varilables: sekmesinde bu değişkenleri görebiliriz.
+
+Name - Value değerleri olarak tutulurlar.
+
+Add ile yeni environment değer ekleyebiliriz.
+
+- Bizimi çin uygulamanın hangi ortamda olduğunu yakalamamızı sağlayan değişken ASPNETCORE_ENVIRONMENT değişkenidir. Value'si Development'dir.
+
+Uygulamayı publish edip production'a aldığımız zaman Value, Production olarak algılanacaktır.
+
+Staging ortamında bulunmak istiyorsak manuel olarak Value kısmına Staging yazabiliriz.
+
+---
+
+IWebHostEnvironment Arayüzü ile Runtime Environment Ortamına Erişim
+
+Örneğin HomeController'da Index()'te hangi ortamda olduğumuzu yakalamaya çalışalım.
+
+namespace environmentExample.Controllers
+{
+    public class HomeController : Controller
+    {
+
+        IWebHostEnvironment _webHostEnvironment;
+
+        public HomeController(IWebHostEnvironment webHostEnvironment)
+        {
+            _webHostEnvironment = webHostEnvironment;
+        }
+
+        public IActionResult Index()
+        {
+            if (_webHostEnvironment.IsDevelopment())
+            {
+                ViewBag.Env = "Development";
+            }
+            else if (_webHostEnvironment.IsProduction()) 
+            {
+                ViewBag.Env = "Production";
+            }
+            else if (_webHostEnvironment.IsStaging())
+            {
+                ViewBag.Env = "Staging";
+            }
+            else if(_webHostEnvironment.IsEnvironment("kakara kikiri"))
+            {
+                ViewBag.Env = "kakara kikiri";
+            }
+
+            _webHostEnvironment.IsDevelopment();
+            _webHostEnvironment.IsProduction();
+            _webHostEnvironment.IsStaging();
+
+            _webHostEnvironment.IsEnvironment("kakara kikiri"); //kendi oluşturduğumuz bir ortamda mıyız?
+
+            return View();
+        }
+		...
+		
+ile ekrana Development yazdıracaktır.
+
+ASPNETCORE_ENVIRONMENT'ı Production olarak değiştirip programı çalıştırırsak ekrana Production yazacaktır.
+
+---
+
+Environment Değişkenlerin secrets.json ve appsettings.json Dosyalarını Ezmesi 
+
+IConfiguration _configuration;
+_configuration["a"];
+dediğimiz an,
+		
+ilk önce Environment Varilables'da arayacaktır sonra Secrets.json'da burada da yoksa appsettings.json üzerinde arayacaktır. Birden fazla yerde varsa ilk bulduğu değeri getirir. Yani Environment Değişkenler secrets.json ve appsettings.json dosyalarını ezer.
+
+---
+ 
+.cshtml'de Environment Kontrolü
+
+index.cshtml;
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+<h2>@ViewBag.Env</h2>
+
+<environment names="Development">
+    Development ortamındayız.
+</environment>
+
+<environment names="Development,Production">
+    Development veya Production ortamındayız.
+</environment>
+
+<environment names="kakara kikiri">
+    kakara kikiri ortamındayız.
+</environment>
+
+---
+
+Asp.Net Core launchSettings.json Kullanımı (kaynak:https://yazilim.aykutasil.com/)
+
+- launchSettings.json dosyası sadece local‘de development yaparken kullanılan bir dosyadır. Visual Studio veya dotnet cli ile birlikte kullanılır.
+
+Not: Eğer uygulamamızı sunucuyu deploy ettikten sonra ulaşmak istediğimiz ayarlar var ise bunun belirtilmesi gereken yer launchSettings.json dosyası değildir. Bu tür ayarlar genelde appSettings.json dosyası içerisinde tanımlanır.
+
+launchSettings.json dosyası;
+
+{
+  "iisSettings": {
+    "windowsAuthentication": false, 
+    "anonymousAuthentication": true, 
+    "iisExpress": {
+      "applicationUrl": "http://localhost:59119",
+      "sslPort": 0
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "FirstCoreWebApplication": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5000,https://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+
+- Yukarıdaki dosyayı inceleyecek olursak profiles tagı altında IIS Express ve FirstCoreWebApplication tagları olduğunu görürüz. Ve bu tagların commandName değerleri IISExpress ve Project olarak tanımlanmıştır.
+
+- FirstCoreWebApplication uygulamamızın ismidir. Varsayılan olarak, eğer Visual Studio kullanarak run edersek "commandName": "IISExpress" bloğu, eğer CLI kullanarak yani dotnet run şeklinde komut yazarak run edersek "commandName": "Project" bloğu ayarları uygulanacaktır.
+
+İhtiyacımıza göre yeni profile oluşturulabilir ve Visual Studio üzerinden profile seçilerek hangi ayarların uygulanmasını istediğimizi seçebiliriz.
+
+Properties ve launchSettings.json:
+
+- Bu kısımda projeyi çalıştırmak için gerekli olan profiller tutulur. Genelde bir WEB Projesi için IIS Express ve .NET Core CLI tabanlı yürütülebilir profiller mevcuttur. Properties alanında Kimlik Doğrulama (Authentication) gibi server ayarları saklanabilir. Projeye özgü bu çevre değişkenleri Properties üzerine çift tıklanarak düzenlenebilir. Projede yapılan bu ayarlarla ilgili tüm değişiklikler launchSettings.json dosyasında saklanır.
+
+Uygulama akışını konfigüre etmek için environment değerlerini set edeceğimiz yer, lokal development için Properties\launchSettings.json dosyasıdır. Burada set ettiğimiz environment değerleri System Environment değerlerini ezecektir. 
+
+Burada “commandName” : “Project” kısmı önemlidir. commandName;
+
+IISExpress
+IIS
+Project (External Server olmadan doğrudan Kestrel ayağa kalkar)
+bu üç değerden biri set edilebilir.

@@ -1,0 +1,229 @@
+Asp.NET Nedir?
+
+- Microsoft tarafından geliştirilmiş bir Web Uygulama Geliştirme mimarisidir.
+
+Asp.NET Core Nedir?
+
+- Microsoft tarafından geliştirilen ücretsiz ve açık kaynak(open source) Web Geliştirme Mimarisidir.
+- Asp.Net'in halefidir.
+- Windows ve Linux vs. ile çalışır.
+- Tüm Asp.NET altyapısı yeniden tasarlanmıştır.
+
+Asp.NET ile farkları:
+
+- Performans, Cross Platform, Modüler Altyapı, Dependency Injection, Asenkron İşlemler, Kolay Bakım, Razor Pages
+
+Asp.NET Core 5.0 ile gelenler;
+
+- Bazı geliştirmeler, Open API - SwaggerDoc, Performans...
+
+---
+
+Temel Kavramlar
+
+- Request: Bir web sitesinin açılması için yaptığımız eyleme, request-istek gönderme denir.
+
+- Client: Client, sunucu tarafından veya ana bilgisayar tarafından sağlanan bilgi aktarımlarında istemci tarafında yer alır. Örnek bir senaryoyla açıklayacak olursak Client yani istemci olan taraf, bir internet sitesine giriş yapmaya çalıştığında ana web sunucusuna ulaşır ve bu sunucudan bilgi talebinde bulunur. Server, yani web sunucusu da kullanıcıya istediği bilgiyi sunar. Bu örnekteki istemci Client'dır.
+
+- User: Client'i kullanarak internet'e girer. Request içerisinde hangi adrese/ip/domain'e istek gönderildiği bilgisi tutulur.
+
+- Hosting: Hosting; web sayfanıza ait tüm dosyaların, yılın 365 günü bir bilgisayarda saklanması ve erişime açık tutulması hizmetidir. Bu bilgisayarlara ise “server” veya “web sunucusu” adı verilir.
+
+- IP (İnternet Protokolü) adresi, bir bilgisayar ağında iletişim için internet teknolojisini kullanan bir aygıtın belirleyici numarasıdır.
+
+- Domain: Domain, Türkçe karşılığı "alan adı" olan bir terimdir. Herhangi bir web sitesine girerken o web sitesinin IP adresi ile ilgili alana bağlanmanız gerekir. Söz konusu IP adreslerinin herkes tarafından bilinmesi ve akılda tutulması mümkün değildir. Dolayısıyla domain kavramı geliştirilmiş olup, insanların IP adresi yerine domain ismi ile web sitesine bağlanması sağlanmıştır.
+
+- Response: Sunucu tarafından client'a dönülen cevaptır. Bu cevap server tarafında üretilen result'u barındırabilir.
+
+---
+
+HTTP Protokolü Nedir? 
+
+- Client ile server arasındaki haberleşmeyi sağlayan ilişki protokolüdür. HTTP, client ile server arasındaki ilişkiyi 9 farklı fonksiyonla gerçekleştirir.
+(Get*, Head, Post*, Put*, Delete*, Trace, Options, Connect, Patch)(* önemli)
+
+Get: Sunucudan veri(leri) listelemek, elde etmek için kullanılır. Verilere başka etkisi yoktur. (Select)
+Tüm haberleri gör, tüm kullanıcıları listele, 5 id'sine sahip kullanıcı bilgilerini edin...
+
+Post: Sunucuya veri göndermek, eklemek için kullanılır. (Insert)
+Haber ekle, yorum yap, not gir, sipariş ver, mesaj gönder.
+
+Put: Var olan bir veriyi değiştirmek, güncellemek için kullanılır. (Update)
+Bir verinin bütününü değil kısmi bir alanını güncelliyorsak eğer bu PATCH isteğidir.
+Not düzelt, yorum güncelle, profil bilgileri değiş, sipariş durumunu güncelle.
+
+Delete: Var olan veriyi silmek için kullanılır. (Delete)
+Haber sil, not sil, 5 id'sine sahip kullanıcyı sil, sipariş sil.
+
+---
+
+Serverlara Detaylı Bakış
+
+IIS: Internet Information Services, Asp.NET Core dahil olmak üzere web uygulamalarını barındırmak için esnek, güvenli ve yönetilebilir bir Web Sunucusudur.
+
+Kestrel: .NET Core ile birlikte gelen Kestrel diğer web sunuculardan bağımsız kendi web sunucu özelliklerini barındıran bir yapıdır. Bu bağımsızlığı sayesinde cross-platform uygulamalar geliştirme altyapısı sunar. Ek olarak da tam teşekküllü bir web serverdan soyutladığı özellikler ile yeniden tasarlanarak, sağladığı performans artışını söylenebilir.
+
+Nginx: Ubuntu/Linux sistemlerde Asp.Net Core uygulamalarını çalıştırabilmemizi sağlayan bir sunucudur. Reverse Proxy olarak Asp.NET Core uygulamalarındaki dahili sunucuyla(Kestrel) işlevsellik gösterir. Yüksek eş zamanlı çalışma kabiliyeti, yüksek performans ve düşük hafıza kullanımına odaklanılarak tasarlanmış bir Web sunucusudur. Aynı zamanda ters vekil sunucusu, yük dengeleyici ve HTTP ön belleği olarak da kullanılabilir.
+
+Not: İnternete erişim sırasında kullanılan ara sunuculara Proxy ya da vekil sunucu denir. Bir web sitesine girdiğiniz zaman tarayıcı ilk olarak Proxy ile bağlantı kurar. Proxy de o sayfaya bağlanır, içeriği alır ve sonra da içeriği tarayıcıya gönderir. Proxy, istemcideki içerikleri farklı sunuculara iletir. Ters Proxy ise ağ trafiğinin düzgün akışını sağlar. Ters Proxy, internet ve web server arasındaki ağ trafiğinin düzgün akışını sağlamak için kullanılır. Ters Proxy, istemci adına kaynakları alır ve daha sonra istemciye bu kaynakları geri döndürür. Güvenlik, hız, gizlilik gibi pek çok konuda kullanıcılara yardımcı olur.
+
+Apache: Linux vs. gibi ortamlarda Apache ile Asp.NET Core uygulamalarını ayağa kaldırabilirsiniz. Apache, yeni başlayanlar için mükemmel bir web sunucusu yazılımıdır.
+
+Docker: Yazılım geliştiriciler ve sistem yöneticileri için geliştirilmiş açık kaynak olan bir yeni nesil sanallaştırma platformudur. Docker, aynı işletim sistemi üzerinde, yüzlerce hatta binlerce birbirinden izole ve bağımsız containerlar sayesinde sanallaştırma sağlayan bir teknolojidir.
+
+HTTP.sys: Yalnızca Windows üzerinde çalışan, Asp.NET Core için bir web sunucusudur. Kestrel'e alternatiftir.
+
+---
+
+Programlama Yaklaşımları
+
+Olay Tabanlı Programlama Yaklaşımı
+
+- Olay Güdümlü ya da Olay Yönlendirmeli olarak da bilinir.
+- Programın akışını kullanıcı eylemlerine göre yönlendiren programlama yaklaşımıdır.
+- Kullanıcı eylerine uygun bir şekilde olaylar tanımlanmıştır. Bu olaylar çalıştırılacak kodu barındırmaktadır.
+- Uygulama hızlı bir şekilde inşa edilebilir. Lakin bakım ve sonraki gelişim süreci oldukça maliyetli olan bir yaklaşımdır.
+
+İki tane aktör vardır.
+
+Olay/event ve iş. Işığın düğmesine basılması olayken ışığın yanması iştir.
+Butona tıklanması olay iken, tıklanma sonucu sayfanın kapanması bir iştir.
+
+---
+
+Model View Controller (MVC) Yaklaşımı
+
+- MVC Pattern'ı kullanan bir yaklaşımdır.
+- Üretilen veri ile gösterim arasında bir soyutlama esas alınmıştır.
+
+User --uses--> Controller --manipulates--> Model --updates--> View --sees--> User döngüsünde çalışır.
+
+Not: MVC pattern'ı Microsoft tarafından üretilmemiştir. 1979'dan beri vardır. Microsoft bu tasarım desenini alıp buna uygun bir mimari geliştirmiştir.
+
+---  
+
+API Nedir?
+
+- Application Programming Interface, Web'de çalışabilen ve web uygulamaları, işletim sistemleri, veritabanları, donanımlar yahut yazılım kütüphaneleri ile iletişim kurabilen bir arayüzdür.
+
+- Direkt olarak Web Uygulaması yaklaşımıdır diyemeyiz. Lakin genellikle web tabanlı uygulamalarda client ve server arasındaki iletişimi sağlayan bir sözleşme olarak kullanılmaktadır. Bu forma Web API denmektedir.
+
+API (Application Programming Interface), programcılık ve web tabanlı uygulamalar konusunda adı çok geçen bir kavramdır. Türkçede ise Uygulama Programlama Arayüzü olarak ifade ediliyor. API arayüzleri, çok çeşitli alanlarda ve çok çeşitli amaçlarla sıklıkla kullanılıyor.
+
+API, bir programın verilere, sunucu yazılımına veya diğer programlara ulaşabilmek için kullandığı bir bağlantı arayüzüdür. İki makinenin nasıl konuştuğunu belirleyen bir dizi kuralları içerir. Örneğin, bir E-ticaret sitesi, API sayesinde bir bankanın verdiği kredi kartından para çekilmesine izin vererek alışveriş yapılmasını sağlayabiliyor.
+
+Ya da bir Facebook App (Android veya iOS), bir API sayesinde Facebook sunucularından size ait verileri çekip size gösterebiliyor. API'ler yardımıyla daha önceden geliştirilmiş bir altyapıya ulaşıp, tekrar altyapı oluşturmaya gerek kalmadan onu kullanma şansına erişiyoruz. Özetle birçok özel veriyi, web üzerinde veya akıllı telefonlarımızla API’ler sayesinde kolayca alabiliyor ve bazı ilave özellikleri edinebiliyoruz. (https://www.hosting.com.tr/bilgi-bankasi/api/)
+
+ASP.NET Core'da Proje Oluşturma ve İlk Bakış
+
+Visual Studio 2022 -> ASP.NET Core Web App -> OrnekProje1 (5.0 Versiyonu ile oluşturalım.)
+
+Program.cs'i tanıyalım.
+
+Asp.NET Core uygulamaları özünde bir console uygulamasıdır. İçinde program.cs barındırır. Kendi dahilinde sunucu barındırır. İşte o sunucuyu ayağa kaldırdığı nokta bu program.cs dosyasıdır.
+
+namespace OrnekProje1
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            CreateHostBuilder(args).Build().Run(); //CreateHostBuilder'dan sonra Build et ve çalıştır.
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) => //CreateHostBuilder fonksiyonu içerisinde,
+            Host.CreateDefaultBuilder(args) //Host üzerinden bir tane DefaultBuilder fonksiyonu çağırmış ve
+                .ConfigureWebHostDefaults(webBuilder => //burada belirli default değerler ile konfigüre edip Host'u ayağa kaldırıyor.
+                {
+                    webBuilder.UseStartup<Startup>(); 
+                });
+    }
+}
+
+UseStartup<Startup>(); ile Startup.cs'deki,
+Program.cs içerisinde ayağa kaldırılacak Host'un kullanacağı konfigürasyonların nereden alınacağını bildirmektedir.
+
+Startup.cs temel konfigürasyon sınıfımızdır. İsminin Startup olması şart değildir. Fakat farklı isim kullanılıyorsa Program.cs'de bildirilmelidir.
+
+namespace OrnekProje1
+{
+    public class Startup
+    {
+        public void ConfigureServices(IServiceCollection services)
+        {
+			//Bu uygulamadakullanılacak servislerin eklendiği/konfigüre edildiği metottur.
+        }
+		
+		//Uygulamada Middleware denilen ara katmanlar vardır. Bu metotta middleware'ler/ara yazılımlar çağırılır.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            app.UseRouting();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapGet("/", async context => 
+                {
+                await context.Response.WriteAsync("Hello Worlds!");
+            });
+        });
+        }
+    }
+}
+
+Servis : Belirli işlere odaklanmış ve o işin sorumluluğu üstlenmiş kütüphaneler ve sınıflardır. servis = modul = kütüphane gibi düşünebiliriz.
+
+---
+
+appsettings.json Nedir?
+
+- Yazılımlarda bazen uygulamanın her yerinde kullanmak isteyeceğimiz metinsel değerler olabilir. (Örn. veritabanı bağlantı metini)
+- Yazılımlarda kullanılması gereken statik olan metinsel değerler kodun içerisinde yerleştirilmez. Çünkü bu kodun değiştiştirilmesi gerektiği durumlarda kodun yazıldığı her yerde değiştirilmesi gerekmektedir. Bu durum ideal değildir. Böyle maliyetlerden kaçınmak için statik olan metinsel değerleri appsettings.json da tutmaktayız.
+
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*"
+}
+
+---
+
+appsettings.Development.json Nedir?
+
+- Environment konusunda daha detaylı.
+
+{
+  "DetailedErrors": true,
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  }
+}
+
+---
+
+Properties klasörü ve launch.settings.json;
+
+- Environment profillerimizi yönettiğimiz bir penceredir. İleride daha detaylı.
+
+---
+
+Dependencies: Uygulamada kullandığımız harici ve dahili kütüphanelerdir.
+
+---
+
+Uygulama ayağa kaldırılırken önce Program.cs tetiklenecek, gerekli Host build edilecek ve Startup.cs ile gerekli konfigürasyonlar alınacak ve uygulama hangi davranışı benimsiyorsa ona göre
+gerekli şekilde çalıştırılacaktır. Örneğin MVC kullanılacaksa MVC'ye göre servisleri eklemek ve middleware'leri çağırmak durumundayız.
+
+IIS Express veya OrnekProje1 yazan yerden programı run edebiliriz. OrnekProje1 yazan yer Kestrel'dir.

@@ -1,0 +1,225 @@
+MVC - Model View Controller
+
+- MVC, birbirinden bağımsız üç katmanı esas alan bir Mimarisel Desen(Architectural Pattern)'dir.
+- Özünde Observer, Decorator gibi design pattern'ları kullanır.
+- Microsoft bu desen üzerine oturtulmuş Asp.NET Core MVC mimarisini geliştirmiştir.
+
+Model: İşlenecek olan veriyi temsil eden katmandır. Genellikle veritabanı işlemleri yapılır. EF Core, Entity Models, Ado.NET, Repository, Veritabanı işlemleri.
+
+View: İstek neticesinde elde edilen verileri görselleştirecek, görsel çıktısını verecek katmandır. HTML, CSS, JS, Razor, Resim, Müzik, Video
+
+Controller: Gelen request'leri karşılayacak olan ve request'in içeriğine göre gerekli model işlemlerini üstlenecek olan katmandır. Algoritmaları, servisleri, veritabanını vs çağırarak/çalıştırarak/sorgulayarak istenilen veriyi üretmekten ve ihtiyaç dahilinde üretilen bu veriyi View ile görselleştirmekten sorumludur. İstek neticesinde elde edilen ve işlenen veriyi tekrar client'a response olarak döndürür.
+
+Not: Request' istemci tarafından sunucu tarafına tam olarak Web sitesi ilgili ne yapacağımızı bildirdiğimiz bir mesajdır. (hatırlatma) 
+
+User -> Client üzerinden istekte-request bulunur. -> Controller, bu istek neticesinde gelen isteğe göre veritabanı ihtiyacı varsa, veriler dış kaynaktan alınacaksa yahut bir model kullanılacaksa
+
+-> Model'a gider. Model'dan ilgili verileri-data ister. Model ilgili verileri üretir ve tekrardan -> Controller'a gönderir. -> View, eğer ki data'ya bir görsellik işlemi yapılacaksa buraya gelir.
+
+-> Controller'a yeniden döner. Controller'da elde edilen sonuçlar-result, tekrardan Client'a gönderilir.(response) -> User
+
+Eğer ki veritabanı ihtiyacımız yoksa, veriler dış kaynaktan alınmayacaksa, yahut bir model kullanılmayacaksa data, Model'a gitmez. Duruma göre View'e uğrayabilir, uğramayadabilir. 
+
+Hepsiburada.com -> Kampanyalı ürünler isteği -> Controller -> Model'da ilgili veriler-ürünler -> Controller -> View, ürünlerin resimleri vs. (render) -> Controller -> Kampanyalı Ürünler verisi.
+
+---
+
+Asp.NET Core MVC Pipeline
+
+Request   -> Kestrel Sunucusu ->  Middleware  ->  Routing ->  Controller Initialization
+																											| (aşağıya doğru)
+Response <- Kestrel Sunucusu <-	Data Result <-	Result Execution	<-	Action Method Execution
+												View Rendering <-
+												(View Result)
+												
+---
+
+MVC Proje Altyapısı - Sıfırdan MVC Kurulumu
+
+Startup.cs;
+
+namespace OrnekUygulama
+{
+    public class Startup
+    {
+        
+        public void ConfigureServices(IServiceCollection services)
+        {
+            //Asp.Net Core uygulamasında MVC mimarisini kullanabilmek için uygulamada Controller ve View yapılanmalarının eklenmesi gerekmektedir.
+            //Bunun için öncelikle bu servis uygulamaya ekleniyor. Böylece uygulama MVC davranışı sergileyebilecektir.
+            services.AddControllersWithViews();
+        }
+
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+
+            app.UseRouting(); //Pipeline'daki Routing middleware'idir. Gelen isteğin rotası bu middleware sayesinde belirlenir.
+
+            //Endpoint: Yapılan isteğin varış noktası. Url. İstek adresi. Bu uygulamaya gelen isteklerin hangi rotalar/şablonlar eşliğinde gelebileceğini
+            //buradan bildireceğiz.
+            app.UseEndpoints(endpoints => 
+            {
+                //endpoints.MapGet("/", async context =>
+                //{
+                //    await context.Response.WriteAsync("Hello World!");
+                //}); //bu kısmı neden comment-out yaptığımızı daha sonra...
+
+                endpoints.MapDefaultControllerRoute(); //İstek yapacağımız default rotayı belirler.
+                /*
+                { controller - Home}/{ action = Index}/{ id ?}
+                default olan endpoint şemasıdır.Bu uygulamaya yapılan istekler bu şemaya uygun yapılacaktır.
+                bir endpoint içerisinde süslü parantez içerisinde belirtilen keyword'ler özel anlam ifade ederler yani belirli parametredirler. 
+                Bu parametreler herhangi bir isimde olabilirler. { controller - Home}/{ action = Index}/{mahmut}
+                Controller ve action sistem tarafından ön tanımlı olan parametrelerdir. Gelen isteğin hangi controller'ı ve hangi action'ı tetikleyeceğini ifade
+                ederler.action'da control sınıfının içerisindeki bir metottur.
+                                   { controller - Home}/{ action = Index}/{ id ?} formatında personel controller, getir action ile eşleşir.           
+                request---> https://www.....com/personel/getir burada personel tablosundaki getir isimli action'u tetikle.
+
+                { controller - Home}/{ action = Index}/{ id ?} 'daki Home, controller'ın boş gelmesi durumunda; Index ise action'ın boş gelmesi durumunda default
+                davranışı belirler.
+                /{ id ?} ise nullable'dır. https://www.....com/personel/getir/3 gibi tanımlanabilir. İleride detaylı.
+                
+                */
+            });
+        }
+    }
+}
+
+---
+
+Controller: Uygulamaya gelen istekleri karşılayabilmek için kulandığımız sınıflardır. Controller sınıfları genellikle Controllers klasörü altında tutulurlar.
+
+OrnekUygulama.sln sağ tık -> Add New Folder -> Controllers klasörünü ekleyelim.
+
+Controller sınıfı oluşturmak;
+Klasörüne sağ tıklayıp Add -> Controller... -> MVC Controller - Empty -> HomeController.cs isminde oluşturalım.
+
+Controller sınıflarının isimlerinin sonuna Controller eki konulması gelenekseldir. Aynı şekilde ProductController.cs'de oluşturalım.
+
+HomeController.cs;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace OrnekUygulama.Controllers
+{
+    //Bir sınıfı request alabilir ve response döndürebilir yani controller yapabilmek için, o sınıfı Controller class'ından türetmemiz gerekmektedir.
+    public class HomeController : Controller 
+    {
+        //Controller sınıfları içerisinde istekleri karşılayan metotlara action metot denir. Bu sınıflar içerisinde tanımlanan tüm metotlar artık action metot
+        //olarak nitelendirilecektir.
+        public IActionResult Index() //Action metot kavramı, controllera gelen isteği karşılayan ve gerekli operasyonları gerçekleştiren metotlardır.
+        {
+            return View();
+        }
+    }
+}
+
+ve ProductController.cs;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        //https://localhost:5001/product/urunlerigetir adresine gidersek bu action'ın tetiklendiğini görürüz.
+        public IActionResult GetProducts()
+        {
+            return View();
+        }
+    }
+}
+
+---
+
+Controller'dan View'a Geçiş
+
+OrnekUygulama.sln sağ tık -> Add New Folder -> Views klasörünü ekleyelim. Bu klasörün adı Views olmak zorundadır.
+
+İlgili Controller'a ait Views klasörünün ismi o controller'ın ismiyle eşleşmelidir.
+
+Views sağ tık -> Add Folder -> Product isimli klasör ile
+Views sağ tık -> Add Folder -> Home isimli klasörü oluşturalım.
+
+Product sağ tık -> Add -> View... -> Razor Empty Page -> GetProducts.cshtml (ilgili controller action'unun ismi ile aynı olmalıdır!)
+
+View dosyaları cshtml uzantılı dosyaları. c# ile html = cshtml => Razor (html içerisinde C# kodları yazmamızı sağlayan bir teknoloji)
+
+Kısaca Razor: Razor View Engine; View’lar da HTML, CSS, JavaScript ile beraber C#’ın da kullanılabilmesini sağlamaktadır. View’lara yazılan HTML, CSS ve JavaScript kodları istemci tarafında çalışmaktadır. C# kodları ise sunucu tarafında çalışır ve sonuç istemciye gönderilir.
+
+GetProducts.cshtml'e ;
+
+<h3>Tüm Ürünler</h3> yazarsak programı çalıştırdığımızda ekranda https://localhost:5001/product/getproducts'a gittiğimizde
+
+Tüm Ürünler yazdığını görürüz.
+
+View'in tetiklenme süreci için ProductController.cs'den devam edelim;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        //https://localhost:5001/product/urunlerigetir adresine gidersek bu action'ın tetiklendiğini görürüz.
+        public IActionResult GetProducts()
+        {
+            //Veri üretildi varsayalım.
+            //View fonksiyonu bu action'a ait view(.cshtml) dosyasını tetikleyecek fonksiyondur.
+            return View();
+
+            //Bu şekilde de gönderebiliriz.
+            /*
+            ViewResult result = View(); //Boş olan View() ilgili action ismiyle birebir aynı olan view'i tetikler.
+            return result;
+            */
+        }
+    }
+}
+
+ViewResult result = View("vuvuzela"); //vuvuzela.cshtml adlı bir view oluşturduktan sonra bunu tetiklemek istersek, bu şekilde View'e yazdığımızda gidip ilgili View ismindeki View dosyasını render eder. Ve ekrana aşağıdaki gibi,
+
+https://localhost:5001/product/getproducts 'a gidersek ekranda Alakasız cshtml yazdığını görürüz.
+
+---
+
+Model Katmanı
+
+OrnekUygulama.sln sağ tık -> Add New Folder -> Models klasörünü ekleyelim. İsmi opsiyoneldir.
+
+Klasöre sağ tıklayıp add -> class ile Product.cs oluşturalım. Veritabanı olarak hizmet ettiğini varsayalım.
+
+namespace OrnekUygulama.Models
+{
+    public class Product
+    {
+        public int Id { get; set; }
+        public string ProductName { get; set; }
+        public int Quantity { get; set; }
+    }
+}
+
+bu class'ı Model olarak ProductController.cs'de kullanmak için;
+
+using Microsoft.AspNetCore.Mvc;
+using OrnekUygulama.Models;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts()
+        {
+            Product product = new Product();
+            //Model katmanındaki bir sınıftan bir nesneyi burada çağırıp kullanmamız/işlem yapmamız Controller'dan Model'a gitmek anlamı taşımaktadır.
+			//Product ile ilgili çalışmalar.....
+            return View(); //ile de bir result return ettik.
+        }
+    }
+}
+
+Ve günün sonunda yine controller'dayız. Buradan sonra da ilgili isteğin response'unu döndürüp temel MVC mimarisini tamamlarız.

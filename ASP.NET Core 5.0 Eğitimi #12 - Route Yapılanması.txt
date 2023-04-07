@@ -1,0 +1,402 @@
+Route: Gelecek olan isteğin hangi rotaya gideceğini belirleyen şablonlardır.
+
+MVC üzerindeki karşılığı gelen isteğe göre hangi Controller'ın ayağa kaldırılacağıdır.
+
+Startup.cs'deki,
+app.UseRouting(); middleware'i tetiklendiği zaman gelen request'deki rotaları ayırmakta ve ilgili rotaya karşılık gelen controller hangisiyse ayağa kaldırıp gerekli action'ı tetiklemektedir.
+
+Bunun yapılabilmesi için süreçte önce rotaların tarif edilmesi gerekmektedir.
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}");
+});
+
+dediğimiz middleware ise kendi çerisinde rotaları tutan ve tanımlamamızı sağlayan bir middleware'dir.
+
+Bu derste birden fazla custom route tanımlamayı göreceğiz. 
+
+Bunun için önce Asp.NET Core Web API (Model-View-Controller) ile hazır bir proje açalım.
+
+---
+
+MapControllerRoute ile Default Route Ayarlama
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapDefaultControllerRoute();
+            });
+			
+açıklamasında yazdığı üzere {controller=Home}/{action=Index}/{id?} default rotasını izlemektedir.
+
+Bir rota oluştururken dikkat edilmesi gereken {} süslü parantezler parametrelere karşılık gelmektedir. Yani burada controller, action ve id olmak üzere 3 tane parametresi vardır.
+
+Burada controller ve action sistem tarafından ön tanımlı parametrelerdir. Yani burada sistemin Controller ve Action mimarilerine karşılık geldikleri otomatik olarak algılanmaktadır. Sistemdeki controller ve onların altındaki action'lara otomatik bakılmaktadır.
+
+Bu ikisi dışındaki parametreler ise custom parametre olarak nitelendirilecektir.
+Burada id ise custom bir parametredir. 
+
+controller=Home, eğer ki controller varsayılan olarak boş gelirse varsayılan olarak Home,
+action=Index, action boş gelirse varsayılan olarak Index'i tetikleyecektir.
+
+Yani ...../ isteği gönderirsek direkt Home'un altındaki Index tetiklenecektir.
+..../home isteği gönderirsek aynı şekilde Home'un altındaki Index tetiklenecektir.
+..../home/index isteği gönderirsek aynı şekilde Home'un altındaki Index tetiklenecektir.
+
+.../personel/getir 'de varsa Personel controller'ı ayağa kaldıracak ve Getir isimli action'u arayıp bulunca da invoke edecektir. Gerekli response'u alıp kullanıcıya döndürecektir.
+
+.../personel 'de ise Home'u ezdik ama action'u belirtmedik. O yüzden yine varsayılan olarak Personel'in altındaki Index'i tetikleyecektir.
+
+---
+
+MapControllerRoute ile Custom Route Oluşturma
+
+- Her bir controller route'un ismi olmalı ve unique olmalıdır. Birinci parametre isim, ikinci parametre pattern alır.
+(MapDefaultControllerRoute hariç, o zaten arka planda Default ismini otomatik olarak alır.)
+
+//Kendi Default'umuzu oluşturalım.
+endpoints.MapControllerRoute("Default", "{action}/{controller}");
+
+Bu şekilde yaptığımızda bundan sonra gelecek olan istekler önce action sonra controller olacak halde gelmelidir. Yoksa hedef controller'ların altındaki action'ları tetikleyemeyiz.
+
+endpoints.MapControllerRoute("Default", "{action}/ahmet/{controller}");
+ile arada ahmet adlı statik bir değer de isteyebiliriz.
+Bu şekilde gelecek istekleri ...index/ahmet/home şeklinde yollamamız gereklidir.
+
+Yani istediğimiz gibi url'ler oluşturabilmekteyiz. (saçma da olsa)
+
+Varsayılan olarak, boş gelme durumlarında, Home değil Personel Controller'ı ve Index action'u tetiklensin istersek;
+endpoints.MapControllerRoute("Default", "{controller=Personel}/cagatay/{action=Index}");
+
+arada da cagatay statik değerini yerleştirdik. 
+
+Uygulamayı çalıştırdığımızda 5001 port'unda herhangi bir başlangıç url'i belirmediğimizden dolayı ilgili endpoint direkt boş gelecektir.
+Boş gelme durumunda ilgili action'u tetiklerken Personel ile Index'i tetiklemesini bekleriz.
+
+Fakat arada cagatay gibi bir static değer varsa format ../personel/cagatay/index olması gerektiği için tetiklenmeyecek ve ilgili action'u bulamadığından dolayı boş bir ekran dönecektir. 
+
+Bunu düzeltmek için yukarıdaki gibi en başta kötü url'ler oluşturmamak lazım.
+
+endpoints.MapControllerRoute("Default", "{action}/{controller}");
+//Personel controller'ını ve action'ını oluşturduk varsayalım.
+
+anasayfa adlı bir rota oluşturup, eğer ki buna bir istek geliyorsa controller'u Home olan ve action'ı Index olan adrese git,
+endpoints.MapControllerRoute("Default2", "anasayfa", new { controller = "Home", action = "Index"});
+demiş olduk. Yani statik bir url'e arkaplanda yönlendirme sağlamış olduk. 
+
+https://localhost:5001/anasayfa dediğimiz zaman Home'un altındaki Index action'ı tetiklenecektir.
+
+Eğer ki birden fazla rota tasarlayacaksak bu rotaları özelden genele olacak şekilde sıralamak gerekir.
+Örneğin yukarıdaki Default2 en yukarıda, eğer ki MapDefaultControllerRoute varsa da en altta olmalıdır.
+
+Aynı anda aynı isimde rota tanımlamamaya dikkat edilmelidir.
+
+---
+
+Tanımlamış olduğumuz rotalar mimari tarafından, url oluşturulurken vb işlemlerde baz alınırlar.
+
+Index.cshtml'de;
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+@Html.ActionLink("Anasayfa", "Index", "Home")
+<br />
+<a asp-action="Index" asp-controller="Home">Anasayfa</a>
+
+Html Helper ya da TagHelper farketmez eğer ki yukarıdaki gibi link oluşturursak, bu link uygun olan bir rota tarafından kabuklanacaktır.
+
+Yani Startup.cs'e gidip oluşturacağı adresin linkine uygun rotayı bulup adresi oluşturacaktır.
+
+endpoints.MapControllerRoute("Default2", "anasayfa", new { controller = "Home", action = "Index"});
+
+yani burada Home ve Index'e karşılık oluşturulan bütün rotalar otomatik olarak /anasayfa'ya yönlendirilmekte, dolayısıyla uygulamamızda bu sayfalara ait bütün linkleri /anasayfa olarak yönlendirmiş oldu.
+
+----
+
+Custom Route'larda Parametreler ve Constraint'ler
+
+endpoints.MapControllerRoute("Default3", "{controller=Home}/{action=Index}/{id?}/{x?}/{y?}");
+ile Custom bir rota oluşturalım.
+ 
+- Parametreler eğer ?nullable değilse o parametrelere bir değer girilmesi mecburidir. Default ya da manuel gelen istekte o parametreye değerin gelmesi gereklidir.
+
+home/index/54/ahmet/3.14
+
+Sistem bu gelen değerlerin türünü bilmez. Url'den gelen değerlerin türleri normal şartlarda sistem tarafında belirsizdir.
+Yani bütün değerlerin türlerini taşıyabilecek parametreler oluşturmuş olduk.
+
+İlgili action tetiklendiğinde ilgili parametreleri yakalamak istiyorsak; (url üzerinden gelen datalarda)
+
+Yani HomeController'daki Index() tetiklendiğinde {id?}/{x?}/{y?}") değerlerini okumak istiyorsak Index(parametreler)
+içerisinde isimlere karşılık gelen parametreler barındırabilir. Ya da bu parametre isimlerine karşılık gelen property isimleri olan bir class ile karşılama yapabilir.
+
+public IActionResult Index(string id, string x, string y)
+        {
+            return View();
+        }
+		
+string daha genel bir karşılama türü olduğundan tercih edildi.
+
+---
+
+Route Constraints
+
+Fakat route'lardaki parametrelere belirli kısıtlamalar uygulamak daha doğrudur.
+
+Örneğin id kesinlikle int olmalıdır diyebiliriz.
+
+{id:int?} kesinlikle int olsun ve nullable olsun.
+{id:int} kesinlikle int olsun.
+
+Örnek olarak;
+
+endpoints.MapControllerRoute("Default3", "{controller=Home}/{action=Index}/{id:int?}/{x?}/{y:int?}");
+Bu rotadan yola çıkarak,
+https://localhost:5001/home/index/3/ahmet/4 isteği gönderdiğimizde,
+
+public IActionResult Index(int id, string x, int y)
+{
+      return View();
+}
+
+ilgili değerlerin yakalandığını görürüz.
+
+https://localhost:5001/home/index/mahmut/ahmet/4 isteğini gönderdiğimizde ise,
+This localhost page can’t be found hatası alırız.
+
+Çünkü id:int olmalı diye belirtmiştik. mahmut'lar int değildir.
+
+Farklı türden kısıtlamalar uygulamakta mümkün.
+
+/{x?}'i ele alalım.
+
+/{x:lenght(12)?} -> x, 12 karakter olsun ve nullable olsun.
+https://localhost:5001/home/index/3/zubizaretta1/5 isteği geçerli.
+https://localhost:5001/home/index/3/zubizaretta123/5 veya
+https://localhost:5001/home/index/3/zubi/5 isteği geçersiz olacaktır.
+
+Örneğin TC Kimlik No'yu rotada taşıyorsak bu durumu kullanabiliriz. 11 karakter sınırlaması vardır.
+
+/{x:maxlenght(12)?} -> maksimum 12 karakter olsun ve nullable olsun.
+/{x:minlenght(5)?} -> minimum 5 karakter olsun ve nullable olsun.
+/{x:range(5,12)?} -> minimum 5, maksimum 12 karakter olsun ve nullable olsun.
+/{x:min(10)?} -> minimum 10 olsun ve nullable olsun.
+/{x:max(10)?} -> maksimum 10 olsun.
+
+Ya da birden fazla constraint uygulayabiliriz.
+
+/{x:alpha:length(12)?} -> x hem alfa numerik olsun. (sadece ingilizce karakterler) hem de 12 karakterli olsun, 
+bir de nullable olsun.
+
+---
+
+IRouteConstraint Interface'i ile Custom Constraint Oluşturma
+
+Solution'da Constaints klasörü oluşturup içerisinde CustomConstraint.cs açalım.
+
+Constraint için kullandığımız parametrenin değerini yakalayabilmek için Match() fonksiyonundaki parametrelerdeki yapıları kullanabiliriz.
+
+
+CustomConstaint.cs;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+
+namespace RouteYapilanmasi.Constraints
+{
+    public class CustomConstaint : IRouteConstraint
+    {
+        public bool Match(HttpContext httpContext, 
+            IRouter route, string routeKey, 
+            RouteValueDictionary values, 
+            RouteDirection routeDirection)
+        {
+            return true; //Şimdilik nasıl kullandığını görelim.
+        }
+    }
+}
+
+Uygulamaya Configure olarak eklememiz lazım. Startup.cs'deki ConfigureServices()'a gelip;
+(using Microsoft.AspNetCore.Routing; eklemeyi unutma)
+
+		public void ConfigureServices(IServiceCollection services)
+        {
+            services.Configure<RouteOptions>(options => options.ConstraintMap.Add("custom", typeof(CustomConstaint)));
+            
+            services.AddControllersWithViews();
+        }
+		
+Artık custom'u url'lerde constraint olarak kullanabiliriz.
+
+endpoints.MapControllerRoute("Default3", "{controller=Home}/{action=Index}/{id:custom}/{x:alpha:length(12)?}/{y:int?}");
+
+id'ye bu custom constraint'ini ekleyelim.
+
+Debug modunda,
+https://localhost:5001/home/index/3/zubizaretta1/15 isteğini atalım.
+İsteğin controller'a gitmeden yani ilgili action tetiklenmeden önce CustomConstaint'in tetiklendiğini görürüz. Eğer ki Match() true dönerse ilgili constraint doğrulanacak ve action tetiklenecektir. (ki biz tetiklensin diye return true yapmıştık.)
+
+routeKey'de hangi parametrenin etkilendiğini,
+values'da hangi Keys(controller, action, id, x, y) ve Values'da (Home, Index, 3, zubizaretta1,15)değerlerin geldiğini görebiliriz.
+
+public class CustomConstaint : IRouteConstraint
+    {
+        public bool Match(HttpContext httpContext, 
+            IRouter route, string routeKey, 
+            RouteValueDictionary values, 
+            RouteDirection routeDirection)
+        {
+            var idvalue = values[routeKey]; //id'ye verilen değeri values indexer içine routeKey vererek yakalayabiliriz.
+            return true;
+        }
+    }
+	
+bu şekilde idvalue üzerinde gerekli işlemler sonucu true döndürüyorsa geçerli false ise url geçersiz döndürecek şekilde ayarlamaları yapabiliriz.
+
+---
+
+Attribute Routing
+
+- Controller bazlı rota tanımlama sürecinde herhangi bir custom rota tanımına ihtiyaç yoktur.
+
+app.UseEndpoints(endpoints =>
+{
+  //alttaki satırları yorum haline getirelim.
+  //endpoints.MapControllerRoute("Default3","{controller=Home}/{action=Index}/{id:custom}/{x:alpha:length(12)?}/{y:int?}");
+  //endpoints.MapDefaultControllerRoute();
+  
+  endpoints.MapControllers(); //Controller'da gelen isteği controller'daki rotalarla eşleştir demiş olduk.
+});
+
+Herhangi bir controller (biz HomeController.cs'i kullanıyoruz.) gelen istekte kendisinin tetikleneceği rotayı kendi üzerinde belirleyebilmektedir.
+
+Bunun içinde route attibute'unu kullanabilmekteyiz.
+
+HomeController'ın Index()'ine bir istek geldiğinde bunun hangi rotada gelmek istediğimizi belirtmek istiyorsak;
+
+Startup.cs de kullanırken tanımlamış olduğumuz route pattern'ın ön tanımlı ve custom parametreleri {} ile tanımlanırdı.
+
+Attribute yöntemi ile yapılan routing'de ön tanımlı parametreler [] ile custom parametreler {} ile tanımlanır.
+
+HomeController.cs'de;
+
+namespace RouteYapilanmasi.Controllers
+{
+    [Route("[controller]/[action]")] //şeklinde rotayı belirtelim.
+    public class HomeController : Controller
+    {
+        private readonly ILogger<HomeController> _logger;
+
+        public HomeController(ILogger<HomeController> logger)
+        {
+            _logger = logger;
+        }
+
+        public IActionResult Index()
+        { //buradan Debug edelim.
+            return View();
+        }
+...
+
+https://localhost:5001/home/index istek attığımızda Index() fonksiyonun tetiklendiğini görürüz.
+
+---
+
+Attribute Route Şablonlarını Özelleştirme
+
+    [Route("sayfa/[action]")]
+
+diyerek opsiyonel şekilde belirtmektense net bir şekilde de belirtebiliriz. 
+sayfa bundan sonra HomeController ile ilişkilendirilecektir. Net bir isim vermiş olduk. Controller'a gelecek istekler sayfa ismi ile gelsin, demiş olduk.
+
+/sayfa/actionIsmi ne ise artık ilgili Home'un altındaki action tetiklenmiş olacaktır.
+
+https://localhost:5001/sayfa/index dersek Home'un altındaki Index() tetiklenmiş olacaktır.
+
+---
+
+Attribute üzerinde action'ları özelleştirebilir miyiz?
+
+- Özel attribute işlemi gerekmektedir. 
+
+[Route("sayfa")] //tetiklendikten sonra ilgili Controller altında hangi action tetiklenecekse,
+    public class HomeController : Controller
+    {
+        private readonly ILogger<HomeController> _logger;
+
+        public HomeController(ILogger<HomeController> logger)
+        {
+            _logger = logger;
+        }
+        [Route("action")] //ilgili action'a gidip bu tanımlamayı yapmalıyız.
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+bu /sayfa/index'a karşılık gelecektir.
+
+https://localhost:5001/sayfa/index ile index'e gideriz.
+
+		[Route("[action]")]
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+		
+https://localhost:5001/sayfa/privacy ile de privacy sayfasına gideriz. Çünkü Privacy() action'u tetiklenecektir.
+
+Action'un da ismini özelleştirebiliriz.
+
+		[Route("[in]")]
+        public IActionResult Index()
+        {
+            return View();
+        }
+		
+https://localhost:5001/sayfa/in dediğimizde de HomeController'ın altındaki Index() tetiklenecektir.
+
+---
+
+Attibute Route Üzerinden Parametre Tanımlama
+
+        [Route("in/{id}")]
+        public IActionResult Index(int id)
+        {
+            return View();
+        }
+		
+		ya da nullable da olsun.
+		
+		[Route("in/{id?}")]
+        public IActionResult Index(int? id)
+        {
+            return View();
+        }
+
+		constraint'de ekleyelim.
+		
+		[Route("in/{id:int?}")]
+        public IActionResult Index(int? id)
+        {
+            return View();
+        }
+		
+		custom'u uygulayalım.
+		
+		[Route("in/{id:custom}")]
+        public IActionResult Index(string id)
+        {
+            return View();
+        }
+		
+Son olarak,
+
+Geleneksek yöntemlerde MVC yapılarında rota şablonları Startup.cs'den merkezi olarak yönetilir.
+
+Özellikle servis yapılanmalarında tüm API'larda controller bazlı route şablonlarının kullanıldığını görebilmekteyiz.

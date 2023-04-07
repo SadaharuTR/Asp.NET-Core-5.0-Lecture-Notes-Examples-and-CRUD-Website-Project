@@ -1,0 +1,102 @@
+@*Razor Nedir?: Asp.NET Core MVC mimarisinde .cshtml uzantılı dosyalarda HTML ile birlikte yazılan C# kodlarının server tarafından çalıştırılmasını sağlayan bir teknolojidir.
+*@
+
+@*
+@ Operatörü: Razor operatörüdür.
+*@
+
+@*Razor ile Değişken Oluşturma*@
+
+@{
+    string metin = "Xiaomi Mi 11 Lite Pro";
+}
+
+@{
+    int a = 5;
+    Console.WriteLine(a);
+}
+
+@*Razor ile Parçalı Scope Yapısı: Yukarıdaki razer scope'larında tanımladığımız değişkenler, farklı scope'larda da erişilebilirdir. Derleme esnasında aynı derecedeki scope'lar tek bir scope içindeymiş gibi nitelendirilecektir.  *@
+
+@{
+    int x = metin.Length; //ile erişebiliriz.
+    int y = a * a;
+}
+
+@*Razor İçerisinde HTML Kullanımı*@
+
+@{
+    <div><h1>Hello World!</h1></div>
+}
+
+@*Razor İçerisinde <text> Etiketi*@
+
+@{
+    if (true)
+    {
+        <text>Evet</text>
+    }
+    else
+    {
+        <text>True</text>
+    }
+}
+
+@*Razor ile Tek Satırlık İşlemler*@
+
+<h3>@(5 + 3)</h3>
+
+<h3>@(35 % 3 == 3 ? "Evet": "Hayır")</h3>
+
+<h3>@(metin)</h3>
+<h3>@metin</h3>
+
+@*Koşul Yapıları: If veya döngüler gibi kendi scope'u olan yapılarda ilgili yapının kendi scope'unu kullanabilmektedir.*@
+
+@*@{
+    int a1 = 5;
+    if (a1 == 5)
+    {
+        <h3>a1 esittir 5</h3>
+    }
+    else
+    {
+        <h3>a1 esit degildir 5</h3>
+    }
+}*@
+@*
+yazmaktansa;*@
+
+@{
+    int a1 = 5;
+}
+
+@if (a1 == 5)
+{
+    <h3>a1 esittir 5</h3>
+}
+else
+{
+    <h3>a1 esit degildir 5</h3>
+}
+@*yazabiliriz.*@
+
+@*Döngüler*@
+
+@foreach(var item in metin){
+    <h3>@item</h3>
+}
+
+@for(int i = 0; i < 10; i++){
+
+}
+
+@*Farklı yapıları da kullanabiliriz.*@
+
+@try{
+
+}
+catch(Exception)
+{
+    throw;
+}

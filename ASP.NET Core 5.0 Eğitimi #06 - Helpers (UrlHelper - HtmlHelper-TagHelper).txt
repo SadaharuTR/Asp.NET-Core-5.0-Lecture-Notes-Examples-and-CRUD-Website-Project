@@ -1,0 +1,342 @@
+UrlHelpers Nedir?
+
+- Asp.NET Core MVC uygulamalarında url oluşturmak için yardımcı metotlar içeren ve o anki url'e dair bizlere bilgi veren bir sınıftır.
+
+Metotlar: Action, AclitonLink, Content, RouteUrl
+Propertyler: ActionContext
+
+Action Metodu: Verilen Controller ve Action'a ait url oluşturmayı sağlar.
+
+Url.Action("index", "product", new {id = 5}) 
+çıktı olarak,
+/product/index/5 verecektir.
+
+burada  endpoints.MapDefaultControllerRoute(); kullanıyorsak bu route'a göre eğer özel bir endpoints.MapControllerRoute("...",...); oluşturduysak ona göre url oluşturacaktır.
+Sistemde kullanılan route'un şemasından yola çıkılarak url'i ayarlar.
+
+---
+
+AclitonLink Metodu: Verilen Controller ve Action'a air url oluşturmaya yarar. Host ve protokol bilgisini de barındırır.
+
+Url.ActionLink("index", "product", new {id = 5}) 
+ile
+https://localhost:5001/product/index/5
+
+---
+
+Content Metodu: Genellikle CSS ve Script gibi dosya dizinlerini programatik olarak tarif etmek için kullanılır.
+
+Url.Content("~site.css")
+çıktı,
+/site.css
+
+UseStaticFiles middleware'i ile gelen static dosya yapılanması bu metodun işlevselliğini daha iyi üstlenmektedir.
+
+---
+
+RouteUrl Metodu: imaride tanımlı olan Route isimlerine uygun bir şekilde url oluşturan metottur.
+
+Url.RouteUrl("Default")
+çıktı olarak,
+/Product/GetProducts
+
+---
+
+ActionContext Property'si: O anki url'e dair tüm bilgilere erişebilmemizi sağlayan bir property'dir.
+
+Url.ActionContext;
+
+-------------------------
+
+HtmlHelpers: Html etiketlerini server tabanlı oluşturmamızı sağlayan sözde yardımcı metotları barındırmaktadır. Hedeflenen .cshtml dosyalarını render etmemizi sağlar. O anki context'e dair bilgiler edinmemizi ve veri taşıma kontrollerine erişmemizi sağlarlar.
+
+Metotlar: Html.Partial, Html.RenderPArtial, Html.ActionLink, Html Form Metotları
+Propertyler: ViewContext, TempData, ViewData, ViewBag
+
+Html.Partial Metodu: Hedef View'i render etmemizi sağlayan bir fonksiyondur. View üzerinde Partial fonksiyonu kullanarak farklı bir View'i, controller'dan istek gitmeden, render edip çıktısını verdirebiliriz. Geriye string döndürür.
+
+<div style="border-top-color:ActiveBorder">
+	@Html.Partial("~/Views/Product/Index.cshtml")
+</div>
+
+Render edilen view'e ilgili action'dan model ya da data gönderilebilmektedir.
+
+Örnek olarak;
+
+ProductController.cs;
+
+namespace OrnekUygulama.Controllers
+{
+    public class ProductController : Controller
+    {
+        public IActionResult GetProducts() 
+        {           
+            return View();
+        }
+    }
+}
+
+ListPartial.cshtml;
+
+<h3>Ürün Listesi</h3>
+
+buradaki ListPartial.cshtml'i GetProducts.cshtml'e yerleştirmek için;
+
+GetProducts.cshtml'de;
+
+@{
+    ViewData["Title"] = "GetProducts";
+}
+
+<h1>GetProducts</h1>
+
+@Html.Partial("~/Views/Product/Partials/ListPartial.cshtml")
+
+yazmamız yeterlidir.
+
+---
+
+Html.RenderPartial: Hedef View'i render etmemizi sağlayan bir fonksiyondur. Geriye void döndürür.
+
+<div style="border-top-color:ActiveBorder">
+	@{Html.RenderPartial("~/Views/Product/Index.cshtml");}
+</div>
+
+Html.RenderPartial sayfanın TextWrite'ını kullandığı için (yani Http response stream'e yazıldığı için) Html.Partial'a nazaran daha hızlı render işlemini yürütür. Daha performanslıdır.
+
+----
+
+Html.ActionLink: Url Oluşturur. Oluşturulan linki <a href...> tag'inde oluşturur.
+
+@Html.ActionLink("Anasayfa", "Index", "Home")
+
+<a href="Anasayfa">Anasayfa</a>
+
+----
+
+HtmlHelpers, Html Form Metotları
+
+- Kullanıcıyla etkileşime girmemizi sağlayan form ve input nesneleri oluşturmamızı sağlayan metotlardır.
+
+@Html.BeginForm()
+@Html.CheckBox("cb")
+@Html.TextBox("txt")
+@Html.Display("display")
+@Html.Password("pwd")
+@Html.TextArea("area")
+@Html.ValidationMessage("vldt)
+
+
+HtmlHelper ile form ve input nesnesinin oluşturulması ekstra maliyetlidir. Bu maliyeti ortadan kaldırmak için Asp.Net Core MVC'da TagHelper yapıları gelmiştir.
+
+@Html.TextBox("txtAdi", null, new {style = "background-color: green; color: black"})
+
+Custom HtmlHelper oluşturmak için Extension Metotlardan Faydalanırız;
+
+Projeye Extensions klasörü ile bu klasörün içine Extensions.cs ekleyelim.
+
+using Microsoft.AspNetCore.Html;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace OrnekUygulama.Extensions
+{
+    static public class Extensions
+    {
+        public static IHtmlContent CustomTextBox(this IHtmlHelper htmlHelper, string name, string value= "", string placeHolder = "deger giriniz") =>        
+            htmlHelper.TextBox(name, value, new
+            {
+                style = "background-color: green; color: white; font-size:12px",
+                @class = "form-input",
+                a = "a",
+                b = "b",
+                placeholder = placeHolder
+            });      
+    }
+}
+
+GetProducts.cshtml'de kullanabilmek için using ile ekleyelim.
+
+@using OrnekUygulama.Extensions;
+
+//Normal kullanim.
+@Html.TextBox("txtAdi", null, new {style = "background-color: green; color: black"})
+//Custom olarak oluşturulmuş class ile kullanım.
+@Html.CustomTextBox("txtCustomAdi", null, "Adiniz")
+
+--------------
+
+TagHelpers
+
+- Tag Helpers, daha okunabilir, anlaşılabilir ve kolay geliştirilebilir bir view inşa etmemizi sağlayan, Asp.NET Core ile birlikte HtmlHelpers'ların yerine gelen yapılardır.
+
+- View'lardaki kod maliyetini oldukça düşürmektedirler.
+
+- HtmlHelpers'ların html nesnelerinin generate edilmesini server'a yüklemesinin getirdiği maliyeti de ortadan kaldırırlar.
+
+- HtmlHelpers'lardaki programatik yapılanma, programlama bilmeyen tasarımcıların çalışmasını imkansız getirmekteydi. TagHelpers'lar ile buradaki kusur giderildi ve tasarımcılar açısından programlama bilgisine ihtiyaç duyulmaksızın çalışma yapılabilir nitelik kazandırdı.
+
+- HtmlHelpers ile oluşturulan html nesnesinin attibute'ları 'htmlAttibute' parametresi üzerinden anonimi nesneler ile yapılıyor. Bu durum hem bellek optimizasyonu açısından hem de kod maliyeti açısından oldukça zararlıdır. TagHelpers'lar bunu ortadan kaldırmakta ve html nesnelerine sadece ilgili attibute'ları normal sözdizimi ile vermektedir.
+
+TagHelpers Entegrasyonu
+
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+* ile tüm TagHelpers'a ulaşmak istediğimizi belirtiriz.
+
+---
+
+Html Nesnelerinde TagHelper
+
+Form TagHelper:
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+@*HtmlHelpers ile*@
+@Html.BeginForm("Index", "Product", FormMethod.Post);
+
+@*TagHelpers ile*@
+<form asp-action="Index" asp-controller="Product" method="post"></form>
+
+---
+
+Input TagHelper: asp- dediğimiz an kullanılabilecek attibute'ları görebiliriz.
+
+<form asp-action="Index" asp-controller="Product" method="post">
+
+    @Html.TextBox("txtAdi")
+    <input type="text" style="color:green; background-color:black" asp-/>
+
+</form>
+
+---
+
+Cache TagHelper: İlk DateTime'ın cache'lendiğini, ikincinin cache'lenmediğini görürüz.
+
+<cache>
+    Cache: @DateTime.Now
+</cache>
+<br />
+@DateTime.Now
+
+---
+
+Environment TagHelper: İleride detaylı.
+
+<environment names="Development">
+	<p>Development Ortamı</p>
+</environment>
+<environment names="Production, Staging">
+	<p>Production ve Staging Ortamı</p>
+</environment>
+
+---
+
+Image TagHelper:
+
+- Tarayıcılar static dosyaları local cache üzerinde saklar.
+
+- Cache'lenmiş bir dosya tekrar istenildiği taktirde bunun için server'a istek gönderilmez ve local cache üzerinden ilgili dosyanın cache'i gönderilir. Böylece sayfalar ilk açılışlarından sonraki taleplerde daha hızlı yüklenebilmektedir.
+
+- Lakin bazen dosya adı değişmeden içeriği değişebilmektedir. Böyle bir durumda  ilgili dosyanın cache'den değil server'dan yüklenmesi gerekmektedir. Bu duruma biz ETag yöntemi ile müdahele edebilmekteyiz.
+
+- Asp.NET Core MVC mimarisinde TagHelper'lar içerisinde static dosyalara etag yöntemini uygulayabilir ve dosyanın adı değişmese de içeriği değiştiği taktirde etag üzerinden bu değişikliği fark ederek ilgili dosyanın server'dan talep edileceği bilinebilmektedir.
+
+<img src = "~resim.png" asp-append-version="true" />
+
+bunu yaptıktan sonra eğer ki resim.png değiştiyse etag yapılanması bunu fark edecek ve gerekli güncellemeyi yapacaktır.
+
+HtmlHelper'da böyle bir kontrol yoktur. Manuel yapılmalıdır.
+
+---
+
+Partial TagHelper:
+
+<partial name= "~/Views/Product/Partials/ListPartial.cshtml" />
+
+---
+
+Remove TagHelper: Eklediğimiz TagHelper'ları kaldırmakta kullanılır.
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@removeTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+
+---
+
+Remove! TagHelper: Tag seviyesinde pasifleştirmek için kullanılır.
+
+<form-asp-action= "Index" asp-controller= "Home"></form>
+//Aşağıdaki etikette tag helper artık aktif değildir.
+<!form asp-action = "Index" asp-controller = "Home"><!form>
+
+Kısaca: Tag Helpers, razor sayfalardaki server-side kodları HTML elementleri olarak oluşturmayı sağlayan; View'ın daha okunabilir, anlaşılabilir ve kolay geliştirilebilir hale gelmesine olanak tanıyan, . NET Core ile birlikte gelip, Html Helper kullanımlarının yerini almış yapılardır.
+
+-----------------------------
+
+Custom TagHelpers Oluşturma
+
+- Öncelikle custom TagHelper'lar için ana dizine bir TagHelpers klasörü açalım.
+
+<a href= "mailto:cagatay33@gmail.com">Email</a>
+amacımız her ihtiyaç duyulduğunda yukardaki çıktıyı veren bir TagHelper oluşturmak.
+
+Klasörün içerisine bir class oluşturalım. İsimlendirme geleneği olarak custom oluşturulan TagHelper class'ının sonuna,
+AdiTagHelper.cs eklemek mantıklı olacaktır.
+
+.cshtml'de <email></email> olarak kullanacaksak class ismi EmailTagHelper.cs olmalıdır. Kendisi E-e harf dönüşümünü yapacaktır.
+
+Ayrıca geliştirdiğimiz TagHelper'da isimlerde birden fazla kelime büyük harfler başlıyorsa;
+
+public class MailGonderFormTagHelper : TagHelper
+{
+	//gibi
+}
+
+<mail-gonder-form></mail-gonder-form> araya tire konularak dönüşüm sağlanacaktır.
+
+Örnek:
+
+EmailTagHelper.cs;
+
+using Microsoft.AspNetCore.Razor.TagHelpers;
+
+namespace OrnekUygulama.TagHelpers
+{
+    //sadece isimlendirme yetmez, TagHelper'dan türetilmeli ve using ile ilgili kütüphane eklenmelidir.
+    //Eğer ki sınıf isminden bağımsızlaştırmak istiyorsak;
+    [HtmlTargetElement("uydurmaIsim")] //ile kullanabiliriz.
+    public class EmailTagHelper : TagHelper
+    {
+        public string Mail { get; set; }
+        public string Display { get; set; }
+        public override void Process(TagHelperContext context, TagHelperOutput output)
+        {
+            output.TagName = "a"; //çıktıda a tag'i oluştur.
+            output.Attributes.Add("href",$"mailto:{Mail}");//a'tag'in attibute'larını ayarla.
+            output.Content.Append(Display);//content'ine display'deki değerle output'u doldur.
+            base.Process(context, output);
+        }
+    }
+}
+
+GetProducts.cshtml;
+
+@addTagHelper *,Microsoft.AspNetCore.Mvc.TagHelpers
+@addTagHelper *,OrnekUygulama
+
+<a href="mailto:cagatay33@gmail.com">Email</a>
+<br />
+<email x="xyz" mail="cagatay333@gmail.com" display="Cagatay Mail"></email>
+<br />
+<uydurmaIsim x="xyz" mail="cagatay333@gmail.com" display="Cagatay Mail"></uydurmaIsim>
+
+- Bir sınıfın TagHelper olabilmesi için TagHelper sınıfından türemesi gerekmektedir.
+- Bu sınıfı kullanabilmek için using Microsoft.AspNetCore.Razor.TagHelpers; eklenmelidir.
+
+- TagHelper sınıfın işlevsellik gösterebilmesi için Process fonksiyonunun override edilmesi gerekmektedir.
+
+public override void Process(TagHelperContext context, TagHelperOutput output)
+
+Bu metot bizlere iki adet parametre getirmektedir.
+
+Context parametresi ilgili TagHelper'ı ve ona ait tüm attibute,uniqueId gibi değerleri getirir.
+Output ise ilgili TagHelper'ın çıktısını sunar.

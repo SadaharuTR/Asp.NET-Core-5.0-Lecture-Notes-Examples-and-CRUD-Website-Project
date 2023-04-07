@@ -1,0 +1,303 @@
+Middleware Nedir?
+
+- WEb uygulamasına client'dan gelen request'e karşılık verilecek response'a kadar arada farklı işlemler gerçekleştirmek ve sürecin gidişatına farklı yön vermek isteyebiliriz.
+
+Request ------Midd1-----Midd2------Midd3--------->  Response
+
+Asp:NET Core'daki Controller'ların initialize edilmesi de middleware'ler ile gerçekleştirilir.
+
+---
+
+Middleware'ler Nasıl Çalışır?
+
+- Middleware'ler sarmak bir şekilde tetiklenirler. Bir middleware tetiklendiği zaman kendisi sona ermeden başka bir middleware'i tetikler ve onu bekler. Recursive mantığı ile benzerdir.
+
+---
+
+Asp.NET Core Uygulamasında Middleware
+
+- Asp.NET Core yapısal olarak middleware yapılanmasını destekler.
+
+Startup.cs'deki;
+
+		public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment()) //IsDevelopment() environment'ında devreye sokulmaktadır.
+            {
+                app.UseDeveloperExceptionPage(); //Herhangi bir hata alındığında Exception Page'e yönlendirme olup olmayacağını belirler.
+				app.UseSwagger(); //API'daki endpoint'leri bizlere hızlıca sunan bir kütüphanedir. İlgili aktivasyon işlemleri için middleware'ini tetiklemek gereklidir.
+				app.UseSwaggerUI(c => c.SwaggerEndpoint("/swager/v1/swagger.json", "MiddlewareExample v1")); //Swagger()'ın dashboard'unu sunar.
+            }
+            
+            app.UseHttpsRedirection();
+			
+            app.UseRouting(); //Route işlemlerinde gelen rotanın ayrılmasını sağlar.
+
+            app.UseAuthorization(); //Kullanıcı yetkilerini kontrol eden middleware.
+
+            app.UseEndpoints(endpoints => //Gelen endpoint'ler ile Map'leri eşleştirmemizi sağlar.
+            {            
+                endpoints.MapControllers();
+            });
+        }
+
+- Configure() fonksiyonunun içerisinde ki bütün çalışmalar esasında bir middleware görevi görür. İçerisinde middleware'ler çağrılır.
+Asp.NET Core mimarisinde tüm middleware'ler User adı ile başlar. Kendimize ait custom bir middleware oluşturacaksak bu geleneğe uymak gerekir.
+
+- Middleware'lerde tetiklenme sıralaması önemlidir. Bir middleware bitmeden diğeri tetiklenir, en sonuncuya geldiği zaman artık arkaplanda pipeline bütün middleware'leri geriye alır ondan sonra response'u geri döndürür. Örneğin Authorization işlemleri yapıyorsak önce Authentication middleware'ini çağırırız, artından Authorization middleware'ini çağırırız. Nedeni sarmal tetiklenme davranışıdır. Önce kim olduğunu kontrol etmemiz sonra yetkilerini kontrol etmemiz lazım ki süreç devam edebilsin.
+
+Ya da UseRouting(), UseEndpoints()'ten önce gelmelidir. Önce rota belirlenmeli ki hangi controller'ın tetikleneceği belirlensin.
+
+------
+
+Hazır Middleware'ler (Çekirdek Middleware)
+
+- Run
+- Use
+- Map
+- MapWhen
+
+içi boş, bizim doldurup farklı davranışlar sergiletebildiğimiz middleware'lerdir.
+
+---
+
+Run Metodu -  Middleware'i
+
+- Kendisinden sonra gelen middleware'i tetiklemez. Bu etkiye Short Circuit(Kısa Devre) denir.
+
+midd1 ---> midd2(run) ---> midd3 
+
+midd3 tetiklenmeyecektir. Pipeline devam etmeyeceğinden çıktıyı o an verecektir.
+
+		public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+				app.UseSwagger(); 
+				app.UseSwaggerUI(c => c.SwaggerEndpoint("/swager/v1/swagger.json", "MiddlewareExample v1")); 
+            }
+           
+			app.Run(async c => { await c.Response.WriteAsync("Middleware 1"); }); //sadece ilki tetiklenecek ve sonrakiler tetiklenmeyecektir.
+			app.Run(async c => { await c.Response.WriteAsync("Middleware 2"); });
+		
+            app.UseHttpsRedirection();
+			
+            app.UseRouting();
+
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints => 
+            {            
+                endpoints.MapControllers();
+            });
+        }
+		
+ekrana Middleware 1 yazdıracaktır.
+
+app.Run() kullanırken RequestDelegate ister. Bu delegate imzasında da geriye Task döndürsün, içine de HttpContext türünde parametre alsın ister.
+
+...
+			app.Run(async context => { 
+					Console.WriteLine("Run Middleware");
+			});
+			
+			app.UseRouting();
+
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints => 
+            {            
+                endpoints.MapControllers();
+            });
+...
+
+örneğin localhost:5001/istekadi 'na istek atalım. Konsolda Run Middleware yazacaktır. Fakat ilgili controller neticesinde bir sonuç dönmeyecektir.
+Çünkü app.UseRouting() ve sonrası tetiklenmedi.
+
+---
+
+Use Metodu - Middleware'if
+
+- Run metoduna nazaran, devreye girdikten sonra süreçte sıradaki middleware'i çağırmakta ve normal middleware işlevi bittikten sonra geriye dönüp devam edebilen bir yapıya sahiptir.
+
+app.Use(async (context, task) => //task burada kendisinden bir sonra gelen middleware'i temsil eder. Eğer ki bir sonraki middleware'i tetiklemek istersek buradaki task parametresi üzerinden,
+{ //task yerine next ismi de kullanılabilir.
+	Console.WriteLine("Start Use Middleware");
+	await task.Invoke(); //Invoke() dememiz yeterlidir. task parametresi kendisinden sonraki metodu temsil eden bir delegate'dir.
+	Console.WriteLine("Stop Use Middleware");
+});
+app.Run(async c => //yani Run fonksiyonunu tetikleyecek,
+{
+	Console.WriteLine("Start Run Middleware"); //ekrana bunu yazdırıp sonraki middleware'leri tetiklemeyecektir.
+});
+
+app.UseHttpsRedirection(),
+....
+
+Ekrana;
+
+Start Use Middleware
+Start Run Middleware
+Stop Use Middleware
+
+yazdıracaktır.
+
+Start Use Middleware yazacak ardından kendisinden sonraki Run middleware'ini tetikleyip Start Run Middleware yazdıracak, Invoke() operasyonu burada kendisinden sonraki metotların-middleware'lerin bitmesini bekleyecek, Run metodu işlevi bitince akış tekrardan CW("Stop Use Middleware") devam edeceğinden Stop Use Middleware yazacaktır.
+
+Bir sonraki middleware'i tetikletebilmek için task.Invoke()'u kullanması şarttır. app.Routing() gibi middleware'lerinde içerisinde tast ya da next parametreleri vardır ki sonrakini tetikletebilsin.
+Örneğin Run metodunun içerisinde kendisinden sonraki middleware'i tetikletecek bir parametresi yoktur. O yüzden kısa devre yaptırır.
+
+Örnek:
+
+app.Use(async (context, task) => 
+{ 
+	Console.WriteLine("Start Use Middleware 1");
+	await task.Invoke(); 
+	Console.WriteLine("Stop Use Middleware 1");
+});
+
+app.Use(async (context, task) => 
+{ 
+	Console.WriteLine("Start Use Middleware 2");
+	await task.Invoke(); 
+	Console.WriteLine("Stop Use Middleware 2");
+});
+
+app.Use(async (context, task) => 
+{ 
+	Console.WriteLine("Start Use Middleware 3");
+	await task.Invoke(); 
+	Console.WriteLine("Stop Use Middleware 3");
+});
+
+Çıktısı:
+
+Start Use Middleware 1
+Start Use Middleware 2
+Start Use Middleware 3
+Stop Use Middleware 3
+Stop Use Middleware 2
+Stop Use Middleware 1
+
+---
+
+Map Metodu - Middleware'i
+
+- Middleware'i talep gönderen path'e göre filtrelemek isteyebiliriz. Bunun için Use ya da Run fonksiyonlarında if kontrolü sağlayabilir yahut Map metodu iler daha profesyonel işlem yapabiliriz.
+
+app.Use(async (context, task) => 
+{ 
+	Console.WriteLine("Start Use Middleware 1");
+	await task.Invoke(); 
+	Console.WriteLine("Stop Use Middleware 1");
+});
+
+app.Map("/weatherforecast", builder => 
+{
+	builder.Run(async c => await c.Response.WriteAsync("Run middleware'i tetiklendi."));
+});
+
+app.Map("/home", builder => 
+{
+	Console.WriteLine("Start Use Middleware 2");
+	await task.Invoke(); 
+	Console.WriteLine("Stop Use Middleware 2");
+});
+
+gelen request'in farklı endpoint'lerine göre farklı middleware'leri devreye sokarak farklı davranışlar ile ilgili request'i karşılayabiliyoruz.
+
+---
+
+MapWhen Metodu
+
+- Map metodu ile sadece request'in yapıldığı path'e göre filtreleme yapılırken, MapWhen metodu ile gelen request'in herhangi bir özelliğine göre bir filtreleme işlemi gerçekleştirilebilir.
+
+app.MapWhen(c => c.Request.Method == "GET", builder =>
+{
+	builder.Use(async (context, task) =>
+	{
+		Console.WriteLine("Start Use Middleware 2");
+		await task.Invoke();
+		Console.WriteLine("Stop Use Middleware 2);
+	});
+});
+
+----------------------------------------
+
+Custom Middleware Oluşturma
+
+- Custom Middleware Oluşturken, bir ayrı sınıfta davranışsal olarak tasarlayabilir, extension fonksiyon olarakta Configure(IApplicationBuilder app, IWebHostEnvironment env) içerisinde çağırabiliriz.
+
+Extension fonksiyon olarak çağırabilmek için,
+
+Hangi middleware olursa olsun app. parametresi üzerinden çağırılmıştır. Demek ki yazacağımız custom middleware'i burada extension olarak IApplicationBuilder'a dahil edersek buradan çağırabiliriz ve mimarinin genel sisteminin standart'ına uydurabiliriz.
+
+Startup.cs'i sade tutmak best-practices açısından sağlıklıdır. O yüzden burada yapılacak işlemleri farklı sınıflara dağıtmak bunu sağlamanın en verimli yoludur.
+
+Solution'a sağ tıklayıp middleware sınıflarını tutacak bir klasör oluşturalım. Middlewares klasörü.
+
+Her request geldiğinde Hello yazdıracak bir middleware ihtiyacımız var diyelim.
+
+Middlewares -> Add Class -> HelloMiddleware.cs oluşturalım. (isimlendirme geleneği çok yok. istediğin gibi isimlendir.)
+
+namespace MiddlewareExample.Middlewares
+{
+	public class HelloMiddleware
+	{
+		//Kendisinden sonra gelen middleware'i tetiklemesini sağlamak önceliklidir. Bunun için o middleware'i işaretleyecek delegate'i tanımlamamız gerek.
+		//Bunu da Constructor'da yapabiliriz.
+		RequestDelegate _next; //tetikleme işlemini gerçekleştirebilmek için gelecek olan next'i RequestDelegate referansı ile almamız gerekli.
+		public HelloMiddleware(RequestDelegate next)
+		{
+			_next = next;
+		}
+		
+		//aşağıdaki fonksiyonun varlığı elzemdir. Yukarıdaki RequestDelegate'in temsil edebileceği uygun bir imzada metot bulundurulmalıdır ki bir önceki middleware'deki RequestDelegate'in bir sonrakini
+		//tetikleyebilmesi için o Delegate'e uygun bir imza oluşturulması lazım. O imzaya uygun aşağıdaki fonksiyon tasarlandı.
+		public async Task Invoke(HttpContext httpContext) //Custom middleware'indeki işlemleri burada yapacağız.
+		{
+			//custom operasyonlar
+			Console.WriteLine("Hello Liverpool 3 - Mancester City 1");
+			//şimdi bundan sonraki middleware'in tetiklememiz lazım.
+			await _next.Invoke(httpContext); //bunu yazmasaydık kısa devre yaptırırdık.
+			Console.WriteLine("Bye Bye City 1 - United 3"); //sarmaldaki geriye dönülürken de burası yazdırılacak.
+		}
+	}
+}
+
+Şimdi bu middleware'i sisteme extension olarak dahil etmemiz lazım.
+
+Solution'da Extensions klasörü oluşturalım.
+
+Add Class -> Extension.cs
+
+namespace MiddlewareExample.Extensions
+{
+	static public class Extension
+	{
+	//IApplicationBuilder'da UseHello isimli fonksiyon Extension olarak eklendi.
+		public static IApplicationBuilder UseHello(this IApplicationBuilder applicationBuilder)
+		{
+			return applicationBuilder.UseMiddleware<HelloMiddleware>(); //UseMiddleware fonksiyonu ile HelloMiddleware'i generic olarak ekliyoruz ve sisteme dahil ediyoruz.
+		}
+	}
+}
+
+IApplicationBuilder döndürmemizin sebebi eğer ki Startup.cs'e bakarsak middleware'lerin çoğunun IApplicationBuilder döndürdüğünü görürüz. Yani middlware'in eklediğimiz IApplicationBuilder ne ise onu döndürüyoruz ki app. gibi .'lar ile akıcı çalışmalar yapılabilsin. Middleware'i çalışmaya hazır biçimde döndürüyoruz ki genel bir standart oluşsun.
+
+Artık Startup.cs'e gidip ilgili namespace'i ekledikten sonra using.MiddlewareExample.Extensions;
+
+...
+app.UseRouting();
+
+app.UseHello();
+
+app.UseAuthorization();
+...
+
+isteği yolladığımızda konsola,
+Hello Liverpool 3 - Mancester City 1 
+Bye Bye City 1 - United 3
+
+yazdığını görürüz.
